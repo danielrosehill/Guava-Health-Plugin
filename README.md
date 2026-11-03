@@ -1,7 +1,13 @@
 # Guava Health Plugin
 
 Unofficial agent plugin (Claude Code skills plus a stdlib Python CLI) for the
-[Guava Health](https://guavahealth.com) API. Not affiliated with Guava Health, Inc.
+[Guava Health](https://guavahealth.com) API.
+
+> **Unofficial.** This is not an official Guava app. It was not developed, reviewed or
+> endorsed by Guava Health, Inc. A Guava user built it for their own family's use and
+> shares it as-is under the MIT licence. "Guava" and "Guava Tags" are Guava Health's
+> names, used here only to describe what this works with. For support with Guava itself,
+> contact Guava. For problems with this plugin, open an issue here.
 
 **What this is:** a personal, non-commercial, single-user integration. It is not a product,
 a service or a multi-tenant app. Each person who uses it creates their own Guava API app

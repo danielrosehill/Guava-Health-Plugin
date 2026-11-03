@@ -1,6 +1,8 @@
 # Guava-Health-Plugin: notes for agents
 
-Public plugin `guava-health`. Unofficial client for the Guava Health API.
+Public plugin `guava-health`. Unofficial client for the Guava Health API, built by a user. It is
+not a Guava product. Keep the "Unofficial" notice at the top of README.md, and never word
+anything as if Guava made, endorses or supports it.
 
 ## Hard rules
 

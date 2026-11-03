@@ -1,7 +1,7 @@
 # Family plans and dependents
 
-Status: from Guava's API documentation as read on 2026-11-03, plus the app form.
-Points marked **unverified** have not yet been tested against a real dependent grant.
+Status: from Guava's API documentation and a real live grant for a holder and a dependent
+child (2026-11-03). The remaining open points are listed at the end.
 
 ## The short version
 
@@ -64,10 +64,17 @@ yourself by declining rows when you authorise their profile, or by passing
   creates the medication by name if it doesn't exist. Use the exact name already in the
   profile to avoid creating near-duplicates.
 
-## Unverified, check on first real grant
+## Tested on live (2026-11-03)
 
-- Whether the consent screen lists dependents as a picker or needs a profile switch
-  in the Guava web app before you start the flow.
+- **The consent screen makes you select the profile.** Sign in as the account holder, pick
+  yourself or the dependent, then approve. No profile switch beforehand is needed.
+- The dependent's grant returned `/v1/me` with `user` = the holder's email and `profile` =
+  the child, a different `patient` id from the holder's, and the same 45 scopes. FHIR
+  `MedicationRequest` for the child returned the child's own records.
+- Guava's tag-setup dialog (DIY NFC tags) has the same kind of profile picker, listing the
+  holder and the dependents.
+
+## Still open
 - ~~Whether `/v1/me` needs the `profile` scope~~: `profile` is granted automatically (sandbox, 2026-11-03).
 - The sandbox (test client) always grants a synthetic test patient, so the dependent flow
   can only be checked with a live client.
