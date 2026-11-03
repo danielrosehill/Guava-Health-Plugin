@@ -26,6 +26,14 @@ An agent can fill it for you with the `create-api-app` skill.
 Then **Create App**. The portal shows a client id and a client secret: store both in your
 secrets manager straight away and export them as `GUAVA_CLIENT_ID` / `GUAVA_CLIENT_SECRET`.
 
+## Test keys first, live keys after approval (2026-11-03)
+
+Create App gives a **Development** app with a **test** key (`guava_test_client_…`). It only
+works against the sandbox, which serves a synthetic patient. To reach real profiles, open
+the app in API Apps and click **Submit for production approval**. Once it's approved,
+**Create live key**, then store the live id and secret (`GUAVA_ENV` is inferred from the
+id prefix). Redirect URIs and scopes stay editable on the same page (**Save changes**).
+
 ## Which boxes
 
 For a holder who also manages dependents, the plugin's default (`family-manager` preset,

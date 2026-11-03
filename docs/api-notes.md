@@ -39,7 +39,10 @@ Condensed from https://guavahealth.com/api-portal/documentation (signed-in page,
 - **Units in reads can differ from write units.** A sandbox weight came back as
   `{"value":56310,"unit":"g"}`. Read `unit` on every entry rather than assuming `kg`.
 - **Some sleep timestamps have no offset** (e.g. `2026-08-06T22:42:00`), despite the docs.
-- How a test app gets a live client (review? toggle?) is not known yet.
+- **Live keys need production approval.** A new app is in status "Development" with test keys
+  only. Its page (`/api-portal/app/<appId>`) has **Submit for production approval**. Until
+  that is approved, "Create live key" is disabled ("Submit your app for production approval
+  to enable live keys"). You can create more test keys and edit the scopes there later.
 
 ## OAuth 2.1
 
