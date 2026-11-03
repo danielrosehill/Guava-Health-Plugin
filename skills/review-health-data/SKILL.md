@@ -33,7 +33,7 @@ Check with `guava resolve -p "<name>"` before any write you aren't sure about. E
 | Sleep | `guava search sleep -p <l> --start <iso> --end <iso>` |
 | Activities / water / nutrition | `guava search activities …`, `search water …`, `search nutrition …` |
 | Full history | add `--all --count 1000` (metrics up to 10000). Pages via next links, capped by `--max-pages` |
-| Medications (prescribed) | `guava fhir MedicationRequest -p <l>` |
+| Medications (the app list, incl. hand-entered, plus clinical) | `guava fhir MedicationRequest -p <l>` |
 | Allergies / conditions / immunizations / procedures / providers | `guava fhir AllergyIntolerance …`, `Condition`, `Immunization`, `Procedure`, `Practitioner` |
 
 Notes:

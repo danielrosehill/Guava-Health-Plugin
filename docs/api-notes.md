@@ -123,6 +123,13 @@ resources even though the form offers 15.
 | `GET /fhir/R4/MedicationStatement`, `GET /fhir/R4/metadata` | 404 OperationOutcome "Unsupported resource type." |
 | `GET /openapi.json`, `/v1/openapi.json` | 404 |
 
+Reading the medication list does work, through FHIR: on live (2026-11-03, a dependent's
+grant, no clinical portal connected) `GET /fhir/R4/MedicationRequest` returned the
+medications entered by hand in the Guava app: `status: active`, `intent: plan`,
+`requester` and `reportedReference` = the profile's own Patient, name in
+`medicationCodeableConcept.text`, the dose typed in the app in `dosageInstruction[].text`,
+and its notes in `note[].text`. So it is not limited to portal prescriptions.
+
 So a medication can only be created implicitly, by a `med_usage` entry with a new name.
 Listing, editing and deleting medications, and reading, editing or deleting doses, need the
 Guava app. A 405 rather than a 404 is the sign that a path exists; use that when re-probing. The form has no `profile` checkbox, although

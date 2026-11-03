@@ -86,7 +86,8 @@ yourself by declining rows when you authorise their profile, or by passing
   yourself or the dependent, then approve. No profile switch beforehand is needed.
 - The dependent's grant returned `/v1/me` with `user` = the holder's email and `profile` =
   the child, a different `patient` id from the holder's, and the same 45 scopes. FHIR
-  `MedicationRequest` for the child returned the child's own records.
+  `MedicationRequest` for the child returned the child's own records: the medications
+  entered by hand in the app (patient-reported, `intent: plan`), not only clinical ones.
 - Guava's tag-setup dialog (DIY NFC tags) has the same kind of profile picker, listing the
   holder and the dependents.
 

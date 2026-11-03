@@ -88,7 +88,7 @@ The `setup` skill walks through everything below, plus the optional MCP server.
 | `setup` | Whole setup: CLI, API app, credentials, profiles, then optionally an MCP server (local or behind a gateway) |
 | `create-api-app` | Fill in the API app form in your signed-in browser (stops before Create) |
 | `connect-profile` | Authorise yourself or a dependent; name them, mark self/dependent, list connected profiles |
-| `log-medication` | Record a dose (`med_usage`); check prescribed meds; explains what the API can't do (edit/delete medications) |
+| `log-medication` | Record a dose (`med_usage`); list a profile's medications; explains what the API can't do (edit/delete medications) |
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
 | `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |
