@@ -196,6 +196,40 @@ def fhir_read(resource: str, profile: str | None = None, id: str | None = None) 
 
 
 @mcp.tool()
+def medications(profile: str | None = None, status: str = "active", source: str = "all",
+                format: str = "json") -> Any:
+    """The profile's medication list, flattened from FHIR MedicationRequest: name, status, dose
+    text, as-needed, start, source ('Guava app' for app-entered, else the clinical record), RxNorm,
+    notes. status: active | stopped | completed | all. source: all | app | clinical.
+    format: json, or csv / md to get an export as text. Use the exact `name` when logging a dose."""
+    return _text_or_json(cli.cmd_meds, format, profile=profile, status=status, source=source)
+
+
+@mcp.tool()
+def dose_log(profile: str | None = None, medication: str | None = None, since: str | None = None,
+             until: str | None = None, format: str = "json") -> Any:
+    """Doses logged through this server (local journal; the API has no read for doses, so ones
+    logged in the Guava app or by tag tap are missing). Filters: profile, medication substring,
+    since/until (ISO). format: json, csv or md."""
+    return _text_or_json(cli.cmd_dose_log, format, profile=profile, medication=medication,
+                         since=since, until=until)
+
+
+@mcp.tool()
+def log_water(ml: float, profile: str | None = None, time: str = "now", id: str | None = None,
+              dry_run: bool = False) -> Any:
+    """Log water drunk, in millilitres (POST /v1/water)."""
+    return run(cli.cmd_water, profile=profile, ml=ml, time=time, source="guavahealth.com",
+               id=id, dry_run=dry_run)
+
+
+def _text_or_json(fn, format, **kw):
+    if format not in ("json", "csv", "md"):
+        return {"error": "format must be json, csv or md"}
+    return run(fn, format=format, out=None, **kw)
+
+
+@mcp.tool()
 def schema(section: str | None = None) -> Any:
     """Entry types, fields, units and API limits: data_entries | metrics | search | fhir."""
     return run(cli.cmd_schema, section=section)

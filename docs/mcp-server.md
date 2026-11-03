@@ -9,8 +9,10 @@ copying files between machines.
 ## Tools
 
 `profiles`, `resolve`, `label_profile`, `whoami`, `auth_start`, `auth_finish`,
-`log_medication`, `log_entry` (single or batch), `log_metric`, `search`, `fhir_read`, `schema`,
-`version`. All of them return the CLI's JSON, and errors come back as
+`log_medication`, `log_entry` (single or batch), `log_metric`, `log_water` (0.5.0), `search`,
+`fhir_read`, `medications` and `dose_log` (0.5.0; `format` json|csv|md, text exports come back
+in `output`), `schema`, `version`. The dose journal lives at `/data/dose-log.jsonl`, so only
+doses logged through this server are in it. All of them return the CLI's JSON, and errors come back as
 `{"error": …, "hint": …}` objects rather than exceptions.
 
 `profile` (since 0.4.0) takes a label, a friendly name or an alias, and is optional: left

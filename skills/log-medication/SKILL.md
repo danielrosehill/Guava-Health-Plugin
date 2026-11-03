@@ -20,16 +20,19 @@ Command: `guava` (package `guava-cli` from this repo). If `command -v guava` fai
 2. **Name.** `med_usage` matches by exact name and creates a new medication when the name
    differs. Reuse the name already in the profile: list them with
    `guava fhir MedicationRequest --profile <name>` (`medicationCodeableConcept.text`) and
-   match the user's word to one of them. Ask if none fits. Don't normalise brand names to generics.
-3. **Quantity** is a plain number of the medication's unit as set up in Guava (tablets,
+   match the user's word to one of them. `guava meds -p <name>` (MCP `medications`) gives the
+   same list flattened: name, dose, notes, source. Ask if none fits. Don't normalise brand names to generics.
+3. **Notes.** Anything said about the dose ("after food", "spat half out") goes in `--notes`.
+4. **Quantity** is a plain number of the medication's unit as set up in Guava (tablets,
    ml…), 0.001–1000, default 1. Put the dose description in `--notes` if the unit is unclear.
-4. **Time.** Convert "an hour ago" or "at 8" to local ISO time. Default is now.
-5. Write it:
-   `guava log-med --profile <name> --name "<medication>" --quantity <n> --time <iso> --id <label>-<medication>-<iso>`
+5. **Time.** Convert "an hour ago" or "at 8" to local ISO time. Default is now.
+6. Write it:
+   `guava log-med --profile <name> --name "<medication>" --quantity <n> --time <iso> [--notes "<text>"] --id <label>-<medication>-<iso>`
    The `--id` makes a retry harmless. Use `--dry-run` first if anything was inferred; it
    shows the `profile` the name resolved to.
-6. Confirm from the response: `accepted: 1` means logged. `accepted: 0` means a duplicate
-   id. Check `environment` too (live vs test).
+7. Confirm from the response: `accepted: 1` means logged. `accepted: 0` means a duplicate
+   id. Check `environment` too (live vs test). Accepted doses are also appended to the local
+   journal `$GUAVA_HOME/dose-log.jsonl` (`guava dose-log`), the only way to read them back.
 
 ## Checking, adding, editing, deleting medications
 
@@ -41,8 +44,10 @@ Probed against live and sandbox on 2026-11-03. Every medication-management path 
 | Request | What to do |
 |---|---|
 | "Check X's medications" | `guava fhir MedicationRequest -p X`. Returns the profile's medication list, **including medications added by hand in the app** (tested live 2026-11-03: `requester` and `reportedReference` are the patient, `intent: plan`, dose in `dosageInstruction[].text`, extra text in `note`), plus any from connected clinical records. Logged doses (history) **cannot be read**. Say so if asked. |
-| "Add a medication" | Only by logging a dose under the new exact name (step 5); that creates it. There is no way to set dose, unit or schedule. Confirm first, because it writes a dose entry too. Otherwise send the user to the app. |
+| "Add a medication" | Only by logging a dose under the new exact name (step 6); that creates it. There is no way to set dose, unit or schedule. Confirm first, because it writes a dose entry too. Otherwise send the user to the app. |
 | "Edit / rename / change schedule" | Not possible through the API. Guava app. |
+| "Add a note to a medication" | A medication's own notes are read-only through the API (they come back in `guava meds` `notes`, from `MedicationRequest.note`); setting them is the Guava app. What the API can do: a note on a **dose** (`--notes` on `log-med`, up to 10000 chars), or a `journal` entry naming the medication (`guava log --type journal --notes …`). Offer those; say which one was written. |
+| "Export the list / the doses" | Skill `export-medications`. |
 | "Delete a medication or a dose" | Not possible through the API. Guava app (entries written by the API are editable and deletable there). |
 
 Re-probe when Guava's docs change, and record the result with its date in `docs/api-notes.md`.

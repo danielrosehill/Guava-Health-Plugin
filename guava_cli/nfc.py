@@ -13,6 +13,8 @@ Commands (JSON on stdout):
   write    --id ID [--no-aar] [--lock]  write to an NTAG21x on a PC/SC reader (ACR122U, ACR1252...)
   read                                  read the tag on the reader and decode its URL
   list                                  ids recorded locally
+  sheet    [--id ID ...] [--format md|html|text] [--out F]
+                                        per-tag instructions for writing with a phone (no reader)
 
 The write and read commands need pyscard and a running pcscd service:
   uv tool install 'guava-cli[nfc] @ git+https://github.com/danielrosehill/Guava-Health-Plugin'
@@ -204,13 +206,15 @@ def cmd_new_id(a) -> None:
     rows = registry()
     used = {r["id"] for r in rows}
     new = []
-    for _ in range(a.count):
+    labels = a.label or []
+    for n in range(max(a.count, len(labels))):
         while True:
             i = "".join(secrets.choice(ID_ALPHABET) for _ in range(ID_LEN))
             if i not in used:
                 break
         used.add(i)
-        rec = {"id": i, "label": a.label, "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
+        lab = labels[n] if n < len(labels) else (labels[-1] if labels else None)
+        rec = {"id": i, "label": lab, "for": a.for_, "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
         rows.append(rec)
         new.append({**rec, "url": URL_BASE + i})
     save_registry(rows)
@@ -230,17 +234,75 @@ def cmd_list(a) -> None:
     out(registry())
 
 
+PHONE_STEPS = [
+    "Install an NFC writer app, e.g. NFC Tools (wakdev) from Google Play, and turn NFC on.",
+    "In the app: Write > Add a record > URL/URI, and paste the tag URL below.",
+    "Add a record > Application, and enter com.guavahealth.app (opens Guava on Android; iPhones ignore it).",
+    "Tap Write and hold the blank sticker to the phone's NFC spot until it confirms.",
+    "Don't lock the tag. What it logs is set in Guava, not on the tag.",
+    "Tap the new tag (or open its URL while signed in to Guava). In 'Let's set up your Guava Tag', "
+    "pick the Profile (you or a dependent) and what it logs, e.g. the medication named below.",
+]
+
+
+def cmd_sheet(a) -> None:
+    rows = registry()
+    if a.id:
+        want = set(a.id)
+        rows = [r for r in rows if r["id"] in want]
+        missing = want - {r["id"] for r in rows}
+        if missing:
+            die("Ids not in the local registry", missing=sorted(missing))
+    if not rows:
+        die("No tags to list; create ids first with: guava-nfc new-id --label <what>")
+    tags = [{"n": n, "label": r.get("label") or "(no label)", "for": r.get("for"),
+             "id": r["id"], "url": URL_BASE + r["id"]} for n, r in enumerate(rows, 1)]
+    fmt = a.format
+    if fmt == "json":
+        text = json.dumps({"steps": PHONE_STEPS, "aar": AAR_PACKAGE, "tags": tags}, indent=2, ensure_ascii=False)
+    elif fmt == "html":
+        import html as h
+        li = "".join(f"<li>{h.escape(x)}</li>" for x in PHONE_STEPS)
+        tr = "".join(
+            f"<tr><td>{t['n']}</td><td>{h.escape(t['label'])}</td><td>{h.escape(t['for'] or '')}</td>"
+            f"<td><a href=\"{t['url']}\">{t['url']}</a></td></tr>" for t in tags)
+        text = (f"<h2>Guava Tags to write ({len(tags)})</h2><p>One sticker per row. Each URL is unique: "
+                f"never write the same one to two stickers.</p><ol>{li}</ol>"
+                f"<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\"><tr><th>#</th><th>For</th>"
+                f"<th>Profile</th><th>Tag URL</th></tr>{tr}</table>"
+                f"<p>Application record for every tag: <code>{AAR_PACKAGE}</code></p>")
+    else:
+        md = fmt == "md"
+        lines = [f"{'## ' if md else ''}Guava Tags to write ({len(tags)})", "",
+                 "One sticker per tag. Each URL is unique: never write the same one to two stickers.", "",
+                 *[f"{i}. {x}" for i, x in enumerate(PHONE_STEPS, 1)], ""]
+        lines += [f"{'### ' if md else ''}Tags", ""]
+        for t in tags:
+            who = f" ({t['for']})" if t["for"] else ""
+            lines.append(f"{t['n']}. {t['label']}{who}: {t['url']}")
+        lines += ["", f"Application record for every tag: {AAR_PACKAGE}"]
+        text = "\n".join(lines) + "\n"
+    if a.out:
+        Path(a.out).expanduser().write_text(text)
+        out({"file": str(Path(a.out).expanduser()), "format": fmt, "tags": len(tags)}); return
+    sys.stdout.write(text)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="guava-nfc", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("new-id"); s.add_argument("--count", type=int, default=1); s.add_argument("--label"); s.set_defaults(fn=cmd_new_id)
+    s = sub.add_parser("new-id"); s.add_argument("--count", type=int, default=1)
+    s.add_argument("--label", action="append", help="what the tag is for; repeat for one id per label")
+    s.add_argument("--for", dest="for_", help="whose tag (local note), e.g. 'me' or a child's name"); s.set_defaults(fn=cmd_new_id)
     s = sub.add_parser("ndef"); s.add_argument("--id", required=True); s.add_argument("--no-aar", action="store_true"); s.add_argument("--out"); s.set_defaults(fn=cmd_ndef)
     s = sub.add_parser("write"); s.add_argument("--id", required=True); s.add_argument("--label"); s.add_argument("--no-aar", action="store_true")
     s.add_argument("--lock", action="store_true", help="permanently lock after a verified write (not recommended)")
     s.add_argument("--timeout", type=int, default=30); s.set_defaults(fn=cmd_write)
     s = sub.add_parser("read"); s.add_argument("--timeout", type=int, default=30); s.set_defaults(fn=cmd_read)
     sub.add_parser("list").set_defaults(fn=cmd_list)
+    s = sub.add_parser("sheet"); s.add_argument("--id", action="append", help="repeatable; default all recorded ids")
+    s.add_argument("--format", choices=["md", "html", "text", "json"], default="md"); s.add_argument("--out"); s.set_defaults(fn=cmd_sheet)
     a = p.parse_args()
     a.fn(a)
 

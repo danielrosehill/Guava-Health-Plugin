@@ -73,7 +73,8 @@ The `setup` skill walks through everything below, plus the optional MCP server.
    guava log-med -p "my son" --name "Paracetamol" --quantity 5 --time 2026-11-03T08:00
    guava metric  -p Sam --type body_temperature --value 38.4 --unit Cel
    guava search metrics --types weight --start 2026-10-01   # no -p: yourself
-   guava fhir MedicationRequest
+   guava meds -p Sam --format csv --out meds.csv   # medication list export
+   guava dose-log --since 2026-11-01 --format md    # doses logged through this tool
    ```
    Every write takes `--dry-run` and `--id` (idempotency key).
 
@@ -91,7 +92,9 @@ The `setup` skill walks through everything below, plus the optional MCP server.
 | `log-medication` | Record a dose (`med_usage`); list a profile's medications; explains what the API can't do (edit/delete medications) |
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
-| `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |
+| `export-medications` | Medication list (CSV/Markdown/JSON) and the dose log of doses written through the plugin |
+| `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers with a USB reader and set them up for you or a dependent |
+| `email-nfc-tag-sheet` | *(side feature)* No reader: email yourself one tag URL per medication with the phone-writing steps |
 
 ## MCP server (optional)
 
@@ -103,7 +106,7 @@ the `setup` skill does the deployment.
 ## Limits of the Guava API (2026-11-03)
 
 No reading back self-logged entries (doses, symptoms, mood, journal), no editing or
-deleting through the API, no medication management, and only 7 FHIR resources served.
+deleting through the API, no medication management (including medication notes), and only 7 FHIR resources served.
 Medical-record retrieval from patient portals is US only. See [docs/api-notes.md](docs/api-notes.md).
 
 ## Install

@@ -28,11 +28,16 @@ anything as if Guava made, endorses or supports it.
   - `guava-mcp` (`mcp_server.py`, extra `[mcp]`, pinned `mcp<2`): thin FastMCP wrapper calling the cli functions. Image: `Dockerfile`.
   - `scopes-full.txt`: the family-manager preset, shipped inside the package.
   Skills call `guava` / `guava-nfc` and install them if missing. Bump `__init__.py`, pyproject and plugin.json versions together.
-- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, write-nfc-tag.
+- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, export-medications, write-nfc-tag, email-nfc-tag-sheet.
 - `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags, mcp-server.
 - `reference/`: app-form.json.
 
 ## State (2026-11-03)
+
+- 0.5.0: `guava meds` (flattened MedicationRequest, csv/md/json export), local dose journal
+  `$GUAVA_HOME/dose-log.jsonl` + `guava dose-log` (the API can't read doses), `guava water`
+  (untested against the API), `guava-nfc sheet` and `new-id --label … --label … --for`.
+  MCP tools `medications`, `dose_log`, `log_water`. Medication notes can't be written.
 
 - 0.4.0: profiles have a friendly name, relation (self | dependent) and aliases in
   `$GUAVA_HOME/profiles.json`; `--profile` resolves any of them and is optional (defaults to

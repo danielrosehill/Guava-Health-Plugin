@@ -39,7 +39,7 @@ Pick the route by what is being logged:
 | Weight / height | `guava metric -p <l> --type weight --value 12.3 --unit kg` |
 | Blood pressure | two calls: `systolic_blood_pressure` and `diastolic_blood_pressure`, unit `mm[Hg]`, same `--time` |
 | Glucose | `guava metric -p <l> --type blood_glucose --value 5.4 --unit mmol/L --method blood` |
-| Water | `guava write-raw -p <l> --path /v1/water` with `{"source":"guavahealth.com","log_type":"manual","entries":[{"time":"…","volume":{"value":250,"code":"mL"}}]}` on stdin |
+| Water | `guava water -p <l> --ml 250 [--time …]` (MCP `log_water`). Other units: `write-raw --path /v1/water` with `volume.code` `[foz_us]` |
 | Food | `guava write-raw -p <l> --path /v1/nutrition`, entries with `time`, `name` and optional nutrients |
 
 Rules:

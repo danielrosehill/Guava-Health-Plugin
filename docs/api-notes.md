@@ -106,6 +106,23 @@ SMART-style: `.rs` read, `.cud` write, `.cruds` both. Data entries need `.c` per
 - Response: `{accepted, environment}`.
 - Compression: send and accept `zstd` or `gzip`. Recommended for bulk.
 
+## What the plugin builds on top (0.5.0, 2026-11-03)
+
+- `guava meds` flattens `GET /fhir/R4/MedicationRequest` into name, status, dose
+  (`dosageInstruction[].text`), as-needed, start (`timing.repeat.boundsPeriod.start`), source,
+  RxNorm and notes. Observed on sandbox and live 2026-11-03: hand-entered medications have no
+  `meta.tag`; clinical ones carry the record source in `meta.tag[].display` (sandbox: "Demo
+  Hospital"). `source` is "Guava app" when the tag is absent; that rule is inferred from those
+  two accounts. FHIR Bundles are followed through `link[next]` (not observed in practice yet:
+  the 12-entry sandbox list came back in one page).
+- `guava dose-log`: since there is no read for data entries, every accepted `med_usage` write
+  is appended to `$GUAVA_HOME/dose-log.jsonl` (0600). It only knows doses written through
+  this client on that machine or MCP server.
+- `guava water --ml N` posts `{source, log_type: manual, entries:[{time, volume:{value, code:"mL"}}]}`
+  to `/v1/water`. Built from the docs' write format; dry-run checked, **not yet tested** against the API.
+- Medication notes: `MedicationRequest.note[].text` is read-only, and no endpoint sets it
+  (see Gaps). Notes can go on a dose entry (`notes`) or a `journal` entry instead.
+
 ## Gaps (2026-11-03)
 
 No read of data entries, no update or delete, no medication management, and only 7 FHIR

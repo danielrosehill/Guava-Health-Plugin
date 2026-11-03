@@ -42,6 +42,13 @@ bytes) and anything bigger. Some older DIY scripts used prefix `0x02`, which is
   - Or any other NDEF CLI. `guava-nfc ndef --out tag.ndef` gives the raw NDEF message,
     and `ntag_tlv_hex` is the TLV-wrapped form for raw page writes starting at page 4.
 
+## Without a USB reader
+
+`guava-nfc sheet` turns registry ids into a sheet (Markdown, HTML, text or JSON) with each tag
+URL, its label and whose it is, plus the phone steps. The `email-nfc-tag-sheet` skill mails it
+to the user so they can write the stickers with NFC Tools on Android. The binding can be set up
+before writing by opening the URL in a signed-in browser.
+
 ## Phones
 
 Guava's tag page says: iPhone XS or newer (iOS 14+), Android 5.0+ with NFC. On Android you

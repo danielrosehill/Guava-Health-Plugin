@@ -519,7 +519,33 @@ def post_entries(profile: str, type_: str, entries: list[dict], dry: bool) -> No
     body = {"type": type_, "entries": entries}
     if dry:
         out({"dry_run": True, "profile": resolve(profile), "POST": "/v1/data-entries", "body": body}); return
-    out(api(profile, "POST", "/v1/data-entries", body=body))
+    label = resolve(profile)
+    res = api(label, "POST", "/v1/data-entries", body=body)
+    if type_ == "med_usage" and res.get("accepted"):
+        journal_doses(label, entries, res)
+    out(res)
+
+
+# The API has no read for data entries, so doses written through this tool are also kept in
+# a local journal ($GUAVA_HOME/dose-log.jsonl, 0600). Doses logged in the app or by tag tap
+# never appear here.
+def dose_log_path() -> Path:
+    return home() / "dose-log.jsonl"
+
+
+def journal_doses(label: str, entries: list[dict], res: dict) -> None:
+    p = dose_log_path()
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    logged_at = now_iso()
+    with os.fdopen(fd, "a") as f:
+        for e in entries:
+            f.write(json.dumps({
+                "profile": label, "time": e.get("time"), "medication_name": e.get("medication_name"),
+                "quantity": e.get("quantity", 1), "notes": e.get("notes"),
+                "identifier": (e.get("identifier") or [{}])[0].get("value"),
+                "environment": res.get("environment"), "logged_at": logged_at,
+                "batch_accepted": res.get("accepted"), "batch_size": len(entries)},
+                ensure_ascii=False) + "\n")
 
 
 def json_entries(a) -> list[dict] | None:
@@ -589,6 +615,14 @@ def cmd_metric(a) -> None:
     out(api(a.profile, "POST", "/v1/metrics", body=body))
 
 
+def cmd_water(a) -> None:
+    e = {"time": iso(a.time), "volume": {"value": a.ml, "code": "mL"}}
+    body = {"source": a.source, "log_type": "manual", "entries": [ident(e, a.id)]}
+    if a.dry_run:
+        out({"dry_run": True, "profile": resolve(a.profile), "POST": "/v1/water", "body": body}); return
+    out(api(a.profile, "POST", "/v1/water", body=body))
+
+
 def cmd_write_raw(a) -> None:
     body = json.load(sys.stdin if a.body == "-" else open(a.body))
     if a.dry_run:
@@ -623,11 +657,119 @@ def cmd_search(a) -> None:
          "more": bool(nxt), "entries": entries})
 
 
+def fhir_get(profile: str | None, resource: str, rid: str | None = None, max_pages: int = 20) -> dict:
+    """GET a FHIR resource; for a search Bundle, follow `next` links and merge entries."""
+    res = api(profile, "GET", f"/fhir/R4/{resource}" + (f"/{rid}" if rid else ""))
+    pages = 1
+    while res.get("resourceType") == "Bundle" and pages < max_pages:
+        nxt = next((l["url"] for l in res.get("link", []) if l.get("relation") == "next"), None)
+        if not nxt:
+            break
+        more = http("GET", nxt, headers={"Authorization": "Bearer " + access_token(profile)})
+        res["entry"] = res.get("entry", []) + more.get("entry", [])
+        res["link"] = more.get("link", [])
+        pages += 1
+    return res
+
+
 def cmd_fhir(a) -> None:
     if a.resource not in FHIR_RESOURCES:
         die(f"resource must be one of {sorted(FHIR_RESOURCES)}")
-    path = f"/fhir/R4/{a.resource}" + (f"/{a.id}" if a.id else "")
-    out(api(a.profile, "GET", path))
+    out(fhir_get(a.profile, a.resource, a.id))
+
+
+def med_row(r: dict) -> dict:
+    """Flatten a FHIR MedicationRequest. Observed 2026-11-03 (live + sandbox): app-entered
+    medications have no meta.tag; clinical ones carry the record source in meta.tag[].display."""
+    di = r.get("dosageInstruction") or [{}]
+    cc = r.get("medicationCodeableConcept") or {}
+    rx = next((c.get("code") for c in cc.get("coding", []) if "rxnorm" in c.get("system", "")), None)
+    tags = [t.get("display") for t in (r.get("meta") or {}).get("tag", []) if t.get("display")]
+    start = next((d.get("timing", {}).get("repeat", {}).get("boundsPeriod", {}).get("start")
+                  for d in di if d.get("timing")), None)
+    return {
+        "name": cc.get("text") or (cc.get("coding") or [{}])[0].get("display"),
+        "status": r.get("status"),
+        "dose": "; ".join(d["text"] for d in di if d.get("text")) or None,
+        "as_needed": any(d.get("asNeededBoolean") for d in di) or None,
+        "start": start,
+        "authored_on": r.get("authoredOn"),
+        "source": ", ".join(tags) if tags else "Guava app",
+        "rxnorm": rx,
+        "notes": " | ".join(n.get("text", "") for n in r.get("note", []) if n.get("text")) or None,
+        "id": r.get("id"),
+    }
+
+
+def render(rows: list[dict], fmt: str, cols: list[str], title: str | None = None) -> str:
+    if fmt == "csv":
+        import csv
+        buf = __import__("io").StringIO()
+        w = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+        return buf.getvalue()
+    if fmt == "md":
+        cell = lambda v: "" if v is None else str(v).replace("|", "\\|").replace("\n", " ")
+        lines = ([f"# {title}", ""] if title else []) + [
+            "| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
+        lines += ["| " + " | ".join(cell(r.get(c)) for c in cols) + " |" for r in rows]
+        return "\n".join(lines) + "\n"
+    return json.dumps(rows, indent=2, ensure_ascii=False) + "\n"
+
+
+def emit(rows: list[dict], a, cols: list[str], title: str, meta: dict) -> None:
+    fmt = getattr(a, "format", None) or "json"
+    if fmt == "json" and not getattr(a, "out", None):
+        out({**meta, "count": len(rows), "rows": rows}); return
+    text = render(rows, fmt, cols, title)
+    if getattr(a, "out", None):
+        Path(a.out).expanduser().write_text(text)
+        out({**meta, "count": len(rows), "format": fmt, "file": str(Path(a.out).expanduser())}); return
+    sys.stdout.write(text)
+
+
+MED_COLS = ["name", "status", "dose", "as_needed", "start", "authored_on", "source", "rxnorm", "notes", "id"]
+DOSE_COLS = ["time", "profile", "medication_name", "quantity", "notes", "environment", "identifier", "logged_at"]
+
+
+def cmd_meds(a) -> None:
+    label = resolve(a.profile)
+    b = fhir_get(label, "MedicationRequest")
+    rows = [med_row(e["resource"]) for e in b.get("entry", []) if e.get("resource")]
+    if a.status != "all":
+        rows = [r for r in rows if r["status"] == a.status]
+    if a.source == "app":
+        rows = [r for r in rows if r["source"] == "Guava app"]
+    elif a.source == "clinical":
+        rows = [r for r in rows if r["source"] != "Guava app"]
+    rows.sort(key=lambda r: (r["status"] != "active", (r["name"] or "").lower()))
+    emit(rows, a, MED_COLS, f"Medications: {label} ({dt.date.today().isoformat()})",
+         {"profile": label, "status_filter": a.status, "source_filter": a.source})
+
+
+def cmd_dose_log(a) -> None:
+    p = dose_log_path()
+    rows = [json.loads(l) for l in p.read_text().splitlines() if l.strip()] if p.exists() else []
+    if a.profile:
+        label = resolve(a.profile)
+        rows = [r for r in rows if r.get("profile") == label]
+    if a.medication:
+        rows = [r for r in rows if _norm(a.medication) in _norm(r.get("medication_name") or "")]
+    since, until = (iso(a.since) if a.since else None), (iso(a.until) if a.until else None)
+    def ts(v):
+        try:
+            return dt.datetime.fromisoformat(v)
+        except (TypeError, ValueError):
+            return None
+    if since:
+        rows = [r for r in rows if ts(r.get("time")) and ts(r["time"]) >= ts(since)]
+    if until:
+        rows = [r for r in rows if ts(r.get("time")) and ts(r["time"]) < ts(until)]
+    rows.sort(key=lambda r: r.get("time") or "")
+    emit(rows, a, DOSE_COLS, "Medication doses logged through guava-cli",
+         {"journal": str(p), "caveat": "Only doses written through this tool. Doses logged in the "
+          "Guava app or by tag tap are not readable through the API (2026-11-03)."})
 
 
 # ---------------------------------------------------------------- introspection
@@ -659,11 +801,14 @@ SCHEMA = {
         "read_alone": ["steps", "heart_rate_variability", "resting_heart_rate", "vo2_max",
                        "oxygen_saturation", "respiratory_rate", "blood_glucose", "heart_rate"],
     },
+    "water": {"_endpoint": "POST /v1/water via `guava water --ml N`",
+              "entry": {"time": "ISO 8601", "volume": {"value": "number", "code": "mL | [foz_us]"}}},
     "search": sorted(SEARCH_RESOURCES),
     "fhir": sorted(FHIR_RESOURCES),
     "not_supported_by_api_2026_11_03": ["reading data entries", "editing or deleting any entry",
-                                        "managing medications (create/edit/delete/list; probed "
-                                        "2026-11-03, live and sandbox: 404/405)"],
+                                        "managing medications (create/edit/delete, incl. medication notes; probed "
+                                        "2026-11-03, live and sandbox: 404/405). Listing works "
+                                        "via FHIR MedicationRequest (`guava meds`)"],
 }
 
 
@@ -753,6 +898,14 @@ def main() -> None:
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(fn=cmd_metric)
 
+    s = prof(sub.add_parser("water", help="log water drunk (POST /v1/water)"))
+    s.add_argument("--ml", type=float, required=True)
+    s.add_argument("--time", default="now")
+    s.add_argument("--source", default=os.environ.get("GUAVA_SOURCE", "guavahealth.com"))
+    s.add_argument("--id")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(fn=cmd_water)
+
     s = prof(sub.add_parser("write-raw", help="POST a JSON body to a write endpoint"))
     s.add_argument("--path", required=True, help="/v1/data-entries, /v1/metrics, /v1/sleep, /v1/nutrition, /v1/water, /v1/activities")
     s.add_argument("--body", default="-", help="JSON file, or - for stdin")
@@ -773,6 +926,23 @@ def main() -> None:
     s.add_argument("resource", help=", ".join(sorted(FHIR_RESOURCES)))
     s.add_argument("--id")
     s.set_defaults(fn=cmd_fhir)
+
+    def fmt(sp):
+        sp.add_argument("--format", choices=["json", "csv", "md"], default="json")
+        sp.add_argument("--out", help="write the export to this file instead of stdout")
+        return sp
+
+    s = fmt(prof(sub.add_parser("meds", help="medication list (FHIR MedicationRequest, flattened; export)")))
+    s.add_argument("--status", default="active", help="active (default) | stopped | completed | all")
+    s.add_argument("--source", choices=["all", "app", "clinical"], default="all")
+    s.set_defaults(fn=cmd_meds)
+
+    s = fmt(sub.add_parser("dose-log", help="doses logged through this tool (local journal; export)"))
+    s.add_argument("--profile", "-p", help="filter to one profile (default: all)")
+    s.add_argument("--medication", help="substring match on the name")
+    s.add_argument("--since")
+    s.add_argument("--until")
+    s.set_defaults(fn=cmd_dose_log)
 
     a = p.parse_args()
     a.fn(a)

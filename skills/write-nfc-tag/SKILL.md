@@ -11,11 +11,14 @@ Background and format: `docs/nfc-tags.md`.
 Command: `guava-nfc`. If it's missing, install it with the reader extra:
 `uv tool install 'guava-cli[nfc] @ git+https://github.com/danielrosehill/Guava-Health-Plugin'`.
 
-1. **What and for whom.** Ask what each tag is for (e.g. "Lexapro bottle", "evening meds",
-   "child: inhaler") and how many. That goes in `--label`, which is a local note only. The
-   real binding is set in Guava when the tag is first tapped.
-2. **Ids.** `guava-nfc new-id --count <n> --label "<label>"`. Each tag gets its own id, recorded in
-   `$GUAVA_HOME/nfc-tags.json`. Never reuse an id across tags.
+1. **What and for whom.** Ask whose tags (yourself or a dependent) and what each one logs.
+   For medication tags, offer the profile's list: `guava meds -p <name> --source app` (MCP:
+   `medications`), and use the exact Guava name as the label so it matches what the user picks
+   in Guava's setup dialog. `--label` and `--for` are local notes only. The real binding (which
+   medication, which profile) is set in Guava when the tag is first tapped; the API can't set it.
+2. **Ids.** `guava-nfc new-id --for "<person>" --label "<med 1>" --label "<med 2>"` gives one id
+   per label (or `--count <n>` with one label). Recorded in `$GUAVA_HOME/nfc-tags.json`. Never
+   reuse an id across tags.
 3. **Pick the writer** that's available:
    - **PC/SC reader:** check `pcsc_scan` (or `systemctl is-active pcscd`). Then
      `guava-nfc write --id <id> --label "<label>"`. Ask the user to put the
@@ -23,8 +26,8 @@ Command: `guava-nfc`. If it's missing, install it with the reader extra:
      the URL. One tag at a time: wait for the user to swap tags between writes.
    - **Another NFC CLI** on the machine: `guava-nfc ndef --id <id> --out /tmp/<id>.ndef` and feed it
      the raw NDEF file, or `ntag_tlv_hex` for page-level writes from page 4.
-   - **Phone:** give the user the URL and the two records to add in their NFC app
-     (URL record, then Application record `com.guavahealth.app`).
+   - **No reader:** switch to the `email-nfc-tag-sheet` skill, which emails the user every
+     URL with the phone-app steps (`guava-nfc sheet`).
 4. **Don't lock** unless the user insists and understands it's permanent (`--lock`). Locking
    isn't needed: what the tag logs is changed in Guava, not on the tag.
 5. **Verify** with `guava-nfc read` if a reader is present.
