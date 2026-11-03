@@ -104,7 +104,7 @@ Medical-record retrieval from patient portals is US only. See [docs/api-notes.md
 
 ## Install
 
-Clone this repo and add it as a local plugin (`/plugin` → add from directory), or install it
+Listed in the `danielrosehill` marketplace (`danielrosehill/Claude-Code-Plugins`) as `guava-health`, or clone this repo and add it as a local plugin.
 from a marketplace that lists `guava-health`.
 
 MIT licence.
