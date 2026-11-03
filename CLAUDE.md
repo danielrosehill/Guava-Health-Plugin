@@ -23,7 +23,7 @@ anything as if Guava made, endorses or supports it.
 
 - `guava_cli/`: Python package `guava-cli` (pyproject.toml, hatchling, no core dependencies).
   `uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'` installs two commands:
-  - `guava` (`cli.py`): auth with PAR+PKCE, rotating refresh, per-profile tokens, reads, writes, `schema`, `scopes`, `version`. JSON out.
+  - `guava` (`cli.py`): auth with PAR+PKCE, rotating refresh, per-profile tokens, profile names/relations/aliases (`label`, `resolve`), reads, writes, `schema`, `scopes`, `version`. JSON out.
   - `guava-nfc` (`nfc.py`): DIY Guava Tag writer. The `[nfc]` extra adds pyscard.
   - `guava-mcp` (`mcp_server.py`, extra `[mcp]`, pinned `mcp<2`): thin FastMCP wrapper calling the cli functions. Image: `Dockerfile`.
   - `scopes-full.txt`: the family-manager preset, shipped inside the package.
@@ -33,6 +33,11 @@ anything as if Guava made, endorses or supports it.
 - `reference/`: app-form.json.
 
 ## State (2026-11-03)
+
+- 0.4.0: profiles have a friendly name, relation (self | dependent) and aliases in
+  `$GUAVA_HOME/profiles.json`; `--profile` resolves any of them and is optional (defaults to
+  self). Medication create/edit/delete was probed on live and sandbox: no endpoints exist
+  (docs/api-notes.md "Gaps"), so no skill for it beyond log-medication's explanation.
 
 - NFC: a random 12-character id opened Guava's tag setup dialog with a profile picker that includes dependents (tested). Writing to a physical tag with guava-nfc has not been tested yet.
 

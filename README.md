@@ -34,7 +34,9 @@ app. It doesn't use the API. It's included because it pairs well with the loggin
 
 Guava has no family scope. You create one API app, then authorise it once for yourself
 and once per dependent, picking the dependent on Guava's consent screen. The plugin keeps
-a token per profile under a label (`me`, `child`, …). Details, the scope table for a
+a token per profile under a label (`me`, `child`, …), with a friendly name, a relation
+(`self` or `dependent`) and aliases, so "log a dose for my son" or `-p Sam` picks the right
+grant and `-p` can be left out for yourself. Details, the scope table for a
 child, and what the API can't do yet: [docs/family-and-dependents.md](docs/family-and-dependents.md).
 
 ## Setup
@@ -62,20 +64,22 @@ The `setup` skill walks through everything below, plus the optional MCP server.
    ```
 4. Connect each profile:
    ```
-   guava auth --profile me
-   guava auth --profile child   # choose the child on the consent screen
+   guava auth --profile me --name Alex --relation self
+   guava auth --profile sam --name Sam --relation dependent --alias "my son"   # pick Sam on the consent screen
+   guava label -p sam --alias son   # names can be added or changed later, no re-auth
    ```
 5. Use it:
    ```
-   guava log-med -p child --name "Paracetamol" --quantity 5 --time 2026-11-03T08:00
-   guava metric  -p child --type body_temperature --value 38.4 --unit Cel
-   guava search metrics -p me --types weight --start 2026-10-01
-   guava fhir MedicationRequest -p me
+   guava log-med -p "my son" --name "Paracetamol" --quantity 5 --time 2026-11-03T08:00
+   guava metric  -p Sam --type body_temperature --value 38.4 --unit Cel
+   guava search metrics --types weight --start 2026-10-01   # no -p: yourself
+   guava fhir MedicationRequest
    ```
    Every write takes `--dry-run` and `--id` (idempotency key).
 
-   If you're signing in on a phone or another machine, use `auth -p child --start`, open the
-   printed URL anywhere, then run `auth -p child --finish '<the URL you landed on>'`.
+   If you're signing in on a phone or another machine, use `auth -p sam --start`, open the
+   printed URL anywhere, then run `auth -p sam --finish '<the URL you landed on>'`.
+   Just you? Connect only `me`; every command then works without `-p`.
 
 ## Skills
 
@@ -83,8 +87,8 @@ The `setup` skill walks through everything below, plus the optional MCP server.
 |---|---|
 | `setup` | Whole setup: CLI, API app, credentials, profiles, then optionally an MCP server (local or behind a gateway) |
 | `create-api-app` | Fill in the API app form in your signed-in browser (stops before Create) |
-| `connect-profile` | Authorise yourself or a dependent; list connected profiles |
-| `log-medication` | Record a dose (`med_usage`) |
+| `connect-profile` | Authorise yourself or a dependent; name them, mark self/dependent, list connected profiles |
+| `log-medication` | Record a dose (`med_usage`); check prescribed meds; explains what the API can't do (edit/delete medications) |
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
 | `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |

@@ -109,5 +109,21 @@ SMART-style: `.rs` read, `.cud` write, `.cruds` both. Data entries need `.c` per
 ## Gaps (2026-11-03)
 
 No read of data entries, no update or delete, no medication management, and only 7 FHIR
-resources even though the form offers 15. The form has no `profile` checkbox, although
+resources even though the form offers 15.
+
+**Tested 2026-11-03, live and sandbox, with valid bearer tokens:**
+
+| Request | Result |
+|---|---|
+| `GET /v1/medications`, `GET /v1/medications/{id}`, `POST /v1/medications`, `POST /v1/medications/_search` | 404 `not_found "No such endpoint."` |
+| `GET /v1/medication`, `/v1/meds`, `/v1/med-usage`, `/v1/symptoms`, `/v1/entries`, `/v1/profiles`, `/v1/dependents` | 404 |
+| `POST /v1/data-entries/_search`; `GET`, `PATCH`, `DELETE /v1/data-entries/{id}` | 404 |
+| `GET`, `PUT`, `PATCH`, `DELETE /v1/data-entries` | 405 `method_not_allowed` (the path exists, POST only) |
+| `GET`, `DELETE /v1/metrics` | 405 |
+| `GET /fhir/R4/MedicationStatement`, `GET /fhir/R4/metadata` | 404 OperationOutcome "Unsupported resource type." |
+| `GET /openapi.json`, `/v1/openapi.json` | 404 |
+
+So a medication can only be created implicitly, by a `med_usage` entry with a new name.
+Listing, editing and deleting medications, and reading, editing or deleting doses, need the
+Guava app. A 405 rather than a 404 is the sign that a path exists; use that when re-probing. The form has no `profile` checkbox, although
 `/v1/me` documents that scope.

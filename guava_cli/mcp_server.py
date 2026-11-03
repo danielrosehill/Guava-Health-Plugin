@@ -26,8 +26,10 @@ from . import cli
 mcp = FastMCP(
     "guava",
     instructions=(
-        "Unofficial Guava Health client. Every data tool takes `profile`: the local label of a "
-        "grant (see `profiles`), e.g. the account holder or a dependent child. Writes are "
+        "Unofficial Guava Health client. Every data tool takes `profile`: a grant's label, "
+        "friendly name or alias (see `profiles`; e.g. 'me', a child's first name, 'my son'). "
+        "Omit it for the account holder (relation self) or when only one profile is connected. "
+        "Use `resolve` to check who a name maps to before writing. Writes are "
         "append-only through the API (no edit/delete); pass `id` to make retries harmless. "
         "Self-logged entries (doses, symptoms, mood) cannot be read back through the API. "
         "Call `schema` for entry types, fields and units."),
@@ -87,22 +89,42 @@ def run(fn, **kw):
 
 @mcp.tool()
 def profiles() -> Any:
-    """List connected Guava profiles (label, Guava name, environment, refresh token present)."""
+    """List connected Guava profiles: label, friendly name, relation (self | dependent),
+    aliases, Guava profile name, environment, refresh token present."""
     return run(cli.cmd_profiles)
 
 
 @mcp.tool()
-def whoami(profile: str) -> Any:
+def resolve(profile: str | None = None) -> Any:
+    """Which connected profile a label, name or alias refers to (none = the account holder)."""
+    return run(cli.cmd_resolve, profile=profile)
+
+
+@mcp.tool()
+def label_profile(profile: str, name: str | None = None, relation: str | None = None,
+                  aliases: list[str] | None = None, clear_aliases: bool = False) -> Any:
+    """Set a connected profile's friendly name, relation ('self' for the account holder,
+    'dependent' for a managed profile such as a child) and extra aliases ('my son')."""
+    return run(cli.cmd_label, profile=profile, name=name, relation=relation, alias=aliases,
+               clear_aliases=clear_aliases)
+
+
+@mcp.tool()
+def whoami(profile: str | None = None) -> Any:
     """GET /v1/me for a grant: the granting user and the profile it acts on."""
     return run(cli.cmd_me, profile=profile)
 
 
 @mcp.tool()
-def auth_start(profile: str, scopes: str | None = None) -> Any:
-    """Begin authorising a profile. Returns a consent URL (valid 10 min). The user opens
-    it, signs in as the account holder, SELECTS the profile (self or dependent) and
-    approves, then gives you the URL they land on for auth_finish."""
+def auth_start(profile: str, name: str | None = None, relation: str | None = None,
+               aliases: list[str] | None = None, scopes: str | None = None) -> Any:
+    """Begin authorising a profile. `profile` is the new short label (e.g. 'me', a child's
+    first name in lowercase); `name`, `relation` ('self' | 'dependent') and `aliases` are
+    saved with the grant. Returns a consent URL (valid 10 min). The user opens it, signs in
+    as the account holder, SELECTS the profile (self or dependent) and approves, then gives
+    you the URL they land on for auth_finish."""
     return run(cli.cmd_auth, profile=profile, start=True, finish=None, scopes=scopes,
+               name=name, relation=relation, alias=aliases,
                scopes_file=str(cli.DEFAULT_SCOPES_FILE), paste=False, no_browser=True, timeout=0)
 
 
@@ -116,7 +138,7 @@ def auth_finish(profile: str, redirect_url: str) -> Any:
 # ---------------------------------------------------------------- writes
 
 @mcp.tool()
-def log_medication(profile: str, medication_name: str, quantity: float | None = None,
+def log_medication(medication_name: str, profile: str | None = None, quantity: float | None = None,
                    time: str = "now", notes: str | None = None, id: str | None = None,
                    dry_run: bool = False) -> Any:
     """Log a medication dose (med_usage). Use the exact name already in the profile; a new
@@ -126,7 +148,7 @@ def log_medication(profile: str, medication_name: str, quantity: float | None = 
 
 
 @mcp.tool()
-def log_entry(profile: str, type: str, entries: list[dict] | None = None,
+def log_entry(type: str, profile: str | None = None, entries: list[dict] | None = None,
               fields: dict | None = None, time: str = "now", notes: str | None = None,
               id: str | None = None, dry_run: bool = False) -> Any:
     """Write self-reported data entries: type is one of med_usage, symptoms, mood, energy,
@@ -143,7 +165,7 @@ def log_entry(profile: str, type: str, entries: list[dict] | None = None,
 
 
 @mcp.tool()
-def log_metric(profile: str, type: str, value: float, unit: str | None = None,
+def log_metric(type: str, value: float, profile: str | None = None, unit: str | None = None,
                method: str | None = None, time: str = "now", source: str = "guavahealth.com",
                id: str | None = None, dry_run: bool = False) -> Any:
     """Write one numeric reading (weight, height, body_temperature, systolic_blood_pressure,
@@ -156,7 +178,7 @@ def log_metric(profile: str, type: str, value: float, unit: str | None = None,
 # ---------------------------------------------------------------- reads
 
 @mcp.tool()
-def search(profile: str, resource: str, types: str | None = None, start: str | None = None,
+def search(resource: str, profile: str | None = None, types: str | None = None, start: str | None = None,
            end: str | None = None, count: int = 200, all_pages: bool = False,
            max_pages: int = 20) -> Any:
     """Read metrics | sleep | activities | nutrition | water. For metrics, `types` is required
@@ -167,7 +189,7 @@ def search(profile: str, resource: str, types: str | None = None, start: str | N
 
 
 @mcp.tool()
-def fhir_read(profile: str, resource: str, id: str | None = None) -> Any:
+def fhir_read(resource: str, profile: str | None = None, id: str | None = None) -> Any:
     """Read clinical records (FHIR R4): Patient, Practitioner, AllergyIntolerance, Condition,
     Procedure, MedicationRequest, Immunization."""
     return run(cli.cmd_fhir, profile=profile, resource=resource, id=id)

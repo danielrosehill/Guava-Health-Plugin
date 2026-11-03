@@ -6,6 +6,9 @@ Not made or endorsed by Guava Health, Inc.
 One OAuth grant = one Guava profile. The account holder grants once for
 themselves and once per dependent (choosing the dependent on Guava's consent
 screen). Each grant is stored under a local profile label, e.g. "me", "child".
+Each label can carry a friendly name, a relation (self | dependent) and aliases
+("my son"), kept in $GUAVA_HOME/profiles.json; --profile accepts any of them, and can
+be left out when there is one grant or one marked self.
 
 Credentials come from the environment, never from files in this repo:
   GUAVA_CLIENT_ID, GUAVA_CLIENT_SECRET   (required)
@@ -152,10 +155,113 @@ def iso(value: str | None) -> str:
     return t.isoformat(timespec="seconds")
 
 
+# ---------------------------------------------------------------- profile labels
+
+RELATIONS = ("self", "dependent")
+
+
+def meta_path() -> Path:
+    return home() / "profiles.json"
+
+
+def load_meta() -> dict:
+    p = meta_path()
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def save_meta(meta: dict) -> None:
+    fd = os.open(meta_path(), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
+
+
+def labels() -> list[str]:
+    return sorted(p.stem for p in (home() / "tokens").glob("*.json"))
+
+
+def _norm(x: str) -> str:
+    x = x.strip().lower().replace("\u2019", "'")
+    if x.endswith("'s"):
+        x = x[:-2]
+    elif x.endswith("'"):
+        x = x[:-1]
+    return " ".join(x.split())
+
+
+def resolve(profile: str | None) -> str:
+    """Map a label, friendly name, alias or Guava first name to a stored label. With no
+    profile: the only grant, else the one marked self."""
+    have = labels()
+    meta = load_meta()
+    if not profile:
+        if len(have) == 1:
+            return have[0]
+        selfs = [l for l in have if meta.get(l, {}).get("relation") == "self"]
+        if len(selfs) == 1:
+            return selfs[0]
+        die("Several profiles are connected; say whose", profiles=profile_rows())
+    if profile in have:
+        return profile
+    want = _norm(profile)
+    hits = set()
+    for l in have:
+        m = meta.get(l, {})
+        names = [l, m.get("name") or "", *m.get("aliases", [])]
+        try:
+            gname = json.loads((home() / "tokens" / f"{l}.json").read_text()).get("profile_name") or ""
+        except ValueError:
+            gname = ""
+        names += [gname, gname.split(" ")[0] if gname else ""]
+        if want in {_norm(n) for n in names if n}:
+            hits.add(l)
+    if want in ("me", "myself", "i") and not hits:
+        hits = {l for l in have if meta.get(l, {}).get("relation") == "self"}
+    if len(hits) == 1:
+        return hits.pop()
+    if hits:
+        die(f"'{profile}' matches several profiles", matches=sorted(hits))
+    die(f"No connected profile matches '{profile}'", profiles=profile_rows(),
+        hint="Add a name or alias with: guava label -p <label> --alias '<name>'")
+    return ""
+
+
+def set_meta(label: str, name: str | None = None, relation: str | None = None,
+             aliases: list[str] | None = None, clear_aliases: bool = False) -> dict:
+    if relation and relation not in RELATIONS:
+        die(f"relation must be one of {list(RELATIONS)}")
+    meta = load_meta()
+    m = meta.setdefault(label, {})
+    if name:
+        m["name"] = name
+    if relation:
+        m["relation"] = relation
+    if clear_aliases:
+        m["aliases"] = []
+    for al in aliases or []:
+        if al and _norm(al) not in {_norm(x) for x in m.setdefault("aliases", [])}:
+            m["aliases"].append(al)
+    save_meta(meta)
+    return {label: m}
+
+
+def profile_rows() -> list[dict]:
+    meta = load_meta()
+    rows = []
+    for l in labels():
+        t = json.loads((home() / "tokens" / f"{l}.json").read_text())
+        m = meta.get(l, {})
+        rows.append({"label": l, "name": m.get("name"), "relation": m.get("relation", "unknown"),
+                     "aliases": m.get("aliases", []), "guava_profile": t.get("profile_name"),
+                     "profile_id": t.get("profile_id"), "env": t.get("env"),
+                     "has_refresh_token": bool(t.get("refresh_token")),
+                     "scope_count": len(t.get("scope", "").split())})
+    return rows
+
+
 # ---------------------------------------------------------------- token store
 
 def token_path(profile: str) -> Path:
-    if not profile.replace("-", "").replace("_", "").isalnum():
+    if not profile or not profile.replace("-", "").replace("_", "").isalnum():
         die("Profile label must be alphanumeric (dash/underscore allowed)")
     return home() / "tokens" / f"{profile}.json"
 
@@ -170,8 +276,8 @@ def save_token(profile: str, tok: dict) -> None:
         json.dump(tok, f, indent=2)
 
 
-def load_token(profile: str) -> dict:
-    p = token_path(profile)
+def load_token(profile: str | None) -> dict:
+    p = token_path(resolve(profile))
     if not p.exists():
         die(f"No grant stored for profile '{profile}'",
             hint=f"Run: guava auth --profile {profile}")
@@ -192,7 +298,8 @@ def use_env(e: str | None) -> None:
         os.environ["GUAVA_CLIENT_SECRET"] = os.environ.get("GUAVA_TEST_CLIENT_SECRET", "")
 
 
-def access_token(profile: str) -> str:
+def access_token(profile: str | None) -> str:
+    profile = resolve(profile)
     tok = load_token(profile)
     age = dt.datetime.now().timestamp() - tok.get("obtained_at", 0)
     if age < tok.get("expires_in", 3600) - 120:
@@ -290,7 +397,9 @@ def start_flow(a) -> dict:
     url = AUTHORIZE_URL + "?" + urllib.parse.urlencode(
         {"client_id": env("GUAVA_CLIENT_ID"), "request_uri": par["request_uri"]})
     pend = {"verifier": verifier, "state": state, "redirect_uri": redirect_uri,
-            "expires_at": int(dt.datetime.now().timestamp()) + int(par.get("expires_in", 600))}
+            "expires_at": int(dt.datetime.now().timestamp()) + int(par.get("expires_in", 600)),
+            "name": getattr(a, "name", None), "relation": getattr(a, "relation", None),
+            "aliases": getattr(a, "alias", None) or []}
     fd = os.open(pending_path(a.profile), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
         json.dump(pend, f)
@@ -330,8 +439,19 @@ def finish_flow(profile: str, returned: str) -> None:
         tok["profile_name"] = " ".join(filter(None, [me["profile"].get("given_name"),
                                                       me["profile"].get("family_name")]))
         save_token(profile, tok)
-    out({"ok": True, "profile": profile, "granted_scopes": tok.get("scope", "").split(),
-         "patient": tok.get("patient"), "me": me})
+    # Friendly name and relation. /v1/me looks the same for a holder and a dependent (user
+    # is always the holder), so relation is inferred only as: first self-less grant = self.
+    meta = load_meta()
+    inferred = not pend.get("relation") and not meta.get(profile, {}).get("relation")
+    relation = pend.get("relation") or meta.get(profile, {}).get("relation") or (
+        "dependent" if any(m.get("relation") == "self" for l, m in meta.items() if l != profile)
+        else "self")
+    given = (me.get("profile") or {}).get("given_name") if isinstance(me, dict) else None
+    m = set_meta(profile, name=pend.get("name") or meta.get(profile, {}).get("name") or given,
+                 relation=relation, aliases=pend.get("aliases"))[profile]
+    out({"ok": True, "profile": profile, "name": m.get("name"), "relation": relation,
+         "relation_inferred": inferred, "aliases": m.get("aliases", []),
+         "granted_scopes": tok.get("scope", "").split(), "patient": tok.get("patient"), "me": me})
 
 
 def cmd_auth(a) -> None:
@@ -355,14 +475,18 @@ def cmd_auth(a) -> None:
 
 
 def cmd_profiles(a) -> None:
-    rows = []
-    for p in sorted((home() / "tokens").glob("*.json")):
-        t = json.loads(p.read_text())
-        rows.append({"label": p.stem, "guava_profile": t.get("profile_name"),
-                     "profile_id": t.get("profile_id"), "env": t.get("env"),
-                     "has_refresh_token": bool(t.get("refresh_token")),
-                     "scope_count": len(t.get("scope", "").split())})
-    out(rows)
+    out(profile_rows())
+
+
+def cmd_label(a) -> None:
+    label = resolve(a.profile)
+    out(set_meta(label, name=a.name, relation=a.relation, aliases=a.alias,
+                 clear_aliases=a.clear_aliases))
+
+
+def cmd_resolve(a) -> None:
+    label = resolve(a.profile)
+    out(next(r for r in profile_rows() if r["label"] == label))
 
 
 def cmd_me(a) -> None:
@@ -370,12 +494,16 @@ def cmd_me(a) -> None:
 
 
 def cmd_revoke(a) -> None:
+    a.profile = resolve(a.profile)
     tok = load_token(a.profile)
     for k in ("refresh_token", "access_token"):
         if tok.get(k):
             http("POST", api_base() + "/oauth/revoke", form={"token": tok[k]},
                  headers={"Authorization": client_auth_header()})
     token_path(a.profile).unlink()
+    meta = load_meta()
+    if meta.pop(a.profile, None) is not None:
+        save_meta(meta)
     out({"ok": True, "revoked": a.profile})
 
 
@@ -390,7 +518,7 @@ def ident(entry: dict, key: str | None) -> dict:
 def post_entries(profile: str, type_: str, entries: list[dict], dry: bool) -> None:
     body = {"type": type_, "entries": entries}
     if dry:
-        out({"dry_run": True, "POST": "/v1/data-entries", "body": body}); return
+        out({"dry_run": True, "profile": resolve(profile), "POST": "/v1/data-entries", "body": body}); return
     out(api(profile, "POST", "/v1/data-entries", body=body))
 
 
@@ -457,14 +585,14 @@ def cmd_metric(a) -> None:
         e["method"] = a.method
     body = {"source": a.source, "log_type": "manual", "entries": [ident(e, a.id)]}
     if a.dry_run:
-        out({"dry_run": True, "POST": "/v1/metrics", "body": body}); return
+        out({"dry_run": True, "profile": resolve(a.profile), "POST": "/v1/metrics", "body": body}); return
     out(api(a.profile, "POST", "/v1/metrics", body=body))
 
 
 def cmd_write_raw(a) -> None:
     body = json.load(sys.stdin if a.body == "-" else open(a.body))
     if a.dry_run:
-        out({"dry_run": True, "POST": a.path, "body": body}); return
+        out({"dry_run": True, "profile": resolve(a.profile), "POST": a.path, "body": body}); return
     out(api(a.profile, "POST", a.path, body=body))
 
 
@@ -534,7 +662,8 @@ SCHEMA = {
     "search": sorted(SEARCH_RESOURCES),
     "fhir": sorted(FHIR_RESOURCES),
     "not_supported_by_api_2026_11_03": ["reading data entries", "editing or deleting any entry",
-                                        "managing medications"],
+                                        "managing medications (create/edit/delete/list; probed "
+                                        "2026-11-03, live and sandbox: 404/405)"],
 }
 
 
@@ -557,12 +686,16 @@ def main() -> None:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    def prof(sp, required=True):
+    def prof(sp, required=False):
         sp.add_argument("--profile", "-p", required=required,
-                        help="local label of the grant, e.g. me, child")
+                        help="label, friendly name or alias (e.g. me, child, 'my son'); "
+                             "optional with one grant or one marked self")
         return sp
 
-    s = prof(sub.add_parser("auth", help="grant access for one Guava profile"))
+    s = prof(sub.add_parser("auth", help="grant access for one Guava profile"), required=True)
+    s.add_argument("--name", help="friendly name, e.g. the person's first name")
+    s.add_argument("--relation", choices=RELATIONS, help="self (account holder) or dependent")
+    s.add_argument("--alias", action="append", help="extra name to match, e.g. 'my son' (repeatable)")
     s.add_argument("--scopes", help="space-separated scope string (default: the bundled family-manager preset, see `guava scopes`)")
     s.add_argument("--scopes-file", default=str(DEFAULT_SCOPES_FILE))
     s.add_argument("--paste", action="store_true", help="paste the redirect URL instead of running a local listener")
@@ -572,7 +705,14 @@ def main() -> None:
     s.add_argument("--timeout", type=int, default=300)
     s.set_defaults(fn=cmd_auth)
 
-    sub.add_parser("profiles", help="list stored grants").set_defaults(fn=cmd_profiles)
+    sub.add_parser("profiles", help="list stored grants with names and relations").set_defaults(fn=cmd_profiles)
+    s = prof(sub.add_parser("label", help="set a grant's friendly name, relation, aliases"))
+    s.add_argument("--name")
+    s.add_argument("--relation", choices=RELATIONS)
+    s.add_argument("--alias", action="append", help="repeatable")
+    s.add_argument("--clear-aliases", action="store_true")
+    s.set_defaults(fn=cmd_label)
+    prof(sub.add_parser("resolve", help="which grant a name refers to")).set_defaults(fn=cmd_resolve)
     s = sub.add_parser("schema", help="entry types, fields and units (JSON)")
     s.add_argument("section", nargs="?", help="data_entries | metrics | search | fhir")
     s.set_defaults(fn=cmd_schema)

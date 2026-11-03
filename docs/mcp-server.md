@@ -8,9 +8,15 @@ copying files between machines.
 
 ## Tools
 
-`profiles`, `whoami`, `auth_start`, `auth_finish`, `log_medication`, `log_entry` (single or
-batch), `log_metric`, `search`, `fhir_read`, `schema`, `version`. All of them return the CLI's
-JSON, and errors come back as `{"error": …, "hint": …}` objects rather than exceptions.
+`profiles`, `resolve`, `label_profile`, `whoami`, `auth_start`, `auth_finish`,
+`log_medication`, `log_entry` (single or batch), `log_metric`, `search`, `fhir_read`, `schema`,
+`version`. All of them return the CLI's JSON, and errors come back as
+`{"error": …, "hint": …}` objects rather than exceptions.
+
+`profile` (since 0.4.0) takes a label, a friendly name or an alias, and is optional: left
+out, it means the grant with relation `self`, or the only grant. Names live in
+`/data/profiles.json` next to `tokens/`. `auth_start` takes `name`, `relation` and `aliases`,
+and `label_profile` sets them on an existing grant.
 
 ## Run
 

@@ -38,8 +38,14 @@ place**. Two machines sharing a copy will lock each other out. So:
   once it's deployed (stage 5c). Or **move** (never copy) existing token files from
   `~/.config/guava-health/tokens/` into the server's volume, then delete the local copies.
 
-One grant per person. On the consent screen the user must **select the profile** (self
-or a dependent). Labels: `me`, then each dependent's first name in lowercase.
+Then ask: **just you, or you and people you manage in Guava** (children, dependents)?
+- **Single person:** one grant, `--profile me --name <Name> --relation self`. Every later
+  command can leave `--profile` out.
+- **Family:** that grant, plus one per dependent:
+  `--profile <firstname> --name <Name> --relation dependent --alias "my son"`. On the consent
+  screen the user must **select that dependent's profile**. Afterwards the user can say "check
+  <Name>'s medications" or "log a dose for my son" and the skills pick the grant.
+Run each grant through the `connect-profile` skill. To add a dependent later, run it again.
 
 ## 5. Route
 
@@ -72,5 +78,6 @@ Prefer the user's secrets wrapper over literal `-e` values. Tokens stay in `~/.c
 
 ## 6. Verify
 
-`whoami` / `guava me -p <label>` for each profile shows the right person, then one read (e.g.
+`profiles` lists each grant with the right `name` and `relation` (fix with `label_profile` /
+`guava label`). `whoami` / `guava me -p <label>` for each profile shows the right person, then one read (e.g.
 `search metrics --types weight`). Don't write test entries to real profiles. Use `dry_run`.

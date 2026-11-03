@@ -13,6 +13,19 @@ Command: `guava` (package `guava-cli` from this repo). If `command -v guava` fai
 `uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'`
 (add the `[nfc]` extra for tag writing). Prefix calls with the secrets wrapper if credentials live there.
 
+## Whose data
+
+Pass the person's name the way the user said it: `--profile Sam`, `--profile "my son"`
+(MCP `profile`). The CLI matches it against each grant's label, friendly name, aliases and
+Guava first name. For the account holder ("I", "me", "my"), leave `--profile` out: it
+resolves to the grant marked `self`, or to the only grant. If nothing matches or several
+match, the error lists the connected profiles. Ask the user rather than guessing, then
+offer to save the name they used as an alias (`guava label -p <label> --alias "<name>"`).
+Check with `guava resolve -p "<name>"` before any write you aren't sure about. Every
+`--dry-run` shows the `profile` it resolved to.
+
+## Commands
+
 | Want | Command |
 |---|---|
 | Metrics | `guava search metrics -p <l> --types weight,height --start 2026-10-01` |

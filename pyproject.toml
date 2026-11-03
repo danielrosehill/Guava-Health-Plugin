@@ -1,6 +1,6 @@
 [project]
 name = "guava-cli"
-version = "0.3.0"
+version = "0.4.0"
 description = "Unofficial Guava Health API client for agents (OAuth 2.1, per-profile grants for family plans) plus a DIY Guava Tag NFC writer. Not made by Guava Health, Inc."
 readme = "README.md"
 license = "MIT"

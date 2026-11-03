@@ -14,7 +14,23 @@ profile**. A parent on a family plan who wants to manage their child's data does
 2. Run the OAuth flow **once for yourself**: `guava auth --profile me`.
 3. Run it **again for the child**: `guava auth --profile child`. Sign in as the same
    account holder; on Guava's consent screen choose the child's profile.
-4. The plugin stores one token pair per label. Every command takes `--profile <label>`.
+4. The plugin stores one token pair per label. Every command takes `--profile`.
+
+## Names, relations and aliases (guava-cli 0.4.0, 2026-11-03)
+
+`/v1/me` looks the same for the holder's own grant and a dependent's (`user` is the holder
+both times), so the API can't tell the plugin which grant is "me". The plugin keeps that
+locally in `$GUAVA_HOME/profiles.json` (0600), one entry per label:
+`{"name": "Sam", "relation": "dependent", "aliases": ["my son"]}`.
+
+- Set at auth time (`guava auth -p sam --name Sam --relation dependent --alias "my son"`),
+  or later without re-auth (`guava label -p sam …`; MCP `label_profile`).
+- If no relation is given, the first grant becomes `self` and later ones `dependent`, and
+  the result says `relation_inferred: true` so the agent confirms it.
+- `--profile` matches, case-insensitively and ignoring a trailing `'s`: the label, `name`,
+  any alias, the Guava profile's full or first name, and "me"/"I" → the `self` grant.
+- Without `--profile`: the only grant, else the `self` grant, else an error listing them.
+- Single-person setup: one `self` grant and no `-p` anywhere.
 
 ## How this shows up in the API
 
