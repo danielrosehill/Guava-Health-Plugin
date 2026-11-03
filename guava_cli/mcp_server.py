@@ -18,6 +18,7 @@ import types
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from . import __version__
 from . import cli
@@ -33,6 +34,11 @@ mcp = FastMCP(
     host=os.environ.get("MCP_HOST", "0.0.0.0"),
     port=int(os.environ.get("MCP_PORT", "3000")),
     stateless_http=os.environ.get("MCP_STATELESS", "true").lower() == "true",
+    # Behind a gateway the Host header is the container name, which FastMCP's DNS-rebinding
+    # protection rejects (421). Off by default for the container; set MCP_DNS_REBINDING=on to keep it.
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=os.environ.get("MCP_DNS_REBINDING", "off") == "on",
+        allowed_hosts=["*"], allowed_origins=["*"]),
 )
 
 
