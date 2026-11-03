@@ -1,8 +1,7 @@
 # Guava API: working notes
 
 Condensed from https://guavahealth.com/api-portal/documentation (signed-in page, read
-2026-11-03). Confirmed means it's in the docs; tested means a real call succeeded. Nothing
-is marked tested yet.
+2026-11-03). Confirmed means it's in the docs; tested means a real call succeeded.
 
 ## Hosts
 
@@ -11,6 +10,19 @@ is marked tested yet.
 | Live API | `https://api.guavahealth.com` |
 | Sandbox API | `https://api-test.guavahealth.com` |
 | Authorize (browser) | `https://guavahealth.com/oauth/authorize` |
+
+## Tested 2026-11-03 (beyond the docs)
+
+- **User-Agent is required.** Cloudflare answers `403 error code: 1010` to Python's default
+  `Python-urllib/x` agent on both hosts. Any named agent works.
+- **Test clients only work on the sandbox.** Ids look like `guava_test_client_…`. On
+  `api.guavahealth.com` they get `invalid_client`, and on `api-test.guavahealth.com` they are
+  accepted. `guava.py` infers `GUAVA_ENV=test` from that prefix.
+- **PAR needs `response_type=code` and `client_id` in the form body**, even with HTTP
+  Basic client auth. Without `client_id`: `invalid_request "client_id is required."`.
+  Without `response_type`: `unsupported_response_type`.
+- PAR with all 44 scopes of `reference/scopes-full.txt` returns `201 {request_uri, expires_in: 600}` on the sandbox.
+- How a test app gets a live client (review? toggle?) is not known yet.
 
 ## OAuth 2.1
 

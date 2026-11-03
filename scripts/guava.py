@@ -8,7 +8,7 @@ screen). Each grant is stored under a local profile label, e.g. "me", "child".
 Credentials come from the environment, never from files in this repo:
   GUAVA_CLIENT_ID, GUAVA_CLIENT_SECRET   (required)
   GUAVA_REDIRECT_URI   default https://localhost:8765/callback
-  GUAVA_ENV            live (default) | test
+  GUAVA_ENV            live | test  (default: test if the client id starts guava_test_)
   GUAVA_HOME           default ~/.config/guava-health  (tokens live here, 0600)
 
 All output is JSON on stdout. Errors are JSON on stderr with exit code 1.
@@ -81,8 +81,19 @@ def home() -> Path:
     return p
 
 
+USER_AGENT = "guava-health-plugin/0.1 (+https://github.com/danielrosehill/Guava-Health-Plugin)"
+
+
+def guava_env() -> str:
+    """GUAVA_ENV if set; else infer from the client id (guava_test_client_... -> test)."""
+    e = os.environ.get("GUAVA_ENV")
+    if e:
+        return e
+    return "test" if os.environ.get("GUAVA_CLIENT_ID", "").startswith("guava_test_") else "live"
+
+
 def api_base() -> str:
-    e = env("GUAVA_ENV", "live")
+    e = guava_env()
     if e not in API_BASE:
         die("GUAVA_ENV must be live or test")
     return API_BASE[e]
@@ -96,7 +107,9 @@ def client_auth_header() -> str:
 
 def http(method: str, url: str, *, form: dict | None = None, body: dict | None = None,
          headers: dict | None = None) -> dict:
-    h = {"Accept": "application/json", **(headers or {})}
+    # Cloudflare in front of Guava answers 403 "error code: 1010" to the default
+    # Python-urllib User-Agent (tested 2026-11-03), so always send our own.
+    h = {"Accept": "application/json", "User-Agent": USER_AGENT, **(headers or {})}
     data = None
     if form is not None:
         data = urllib.parse.urlencode(form).encode()
@@ -147,7 +160,7 @@ def token_path(profile: str) -> Path:
 def save_token(profile: str, tok: dict) -> None:
     tok = dict(tok)
     tok["obtained_at"] = int(dt.datetime.now().timestamp())
-    tok["env"] = env("GUAVA_ENV", "live")
+    tok["env"] = guava_env()
     p = token_path(profile)
     fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
@@ -245,7 +258,10 @@ def cmd_auth(a) -> None:
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     state = secrets.token_urlsafe(24)
 
+    # Tested 2026-11-03: PAR needs response_type=code and client_id in the body even
+    # with Basic auth (neither is in Guava's docs).
     par = http("POST", api_base() + "/oauth/par", form={
+        "response_type": "code", "client_id": env("GUAVA_CLIENT_ID", required=True),
         "code_challenge": challenge, "code_challenge_method": "S256", "scope": scopes,
         "state": state, "redirect_uri": redirect_uri,
     }, headers={"Authorization": client_auth_header()})

@@ -26,8 +26,8 @@ Public plugin `guava-health`. Unofficial client for the Guava Health API.
 
 ## State (2026-11-03)
 
-- Built from the signed-in docs page and the New App form. No live call has succeeded yet:
-  everything is confirmed, nothing is tested.
+- Built from the signed-in docs page and the New App form. Sandbox PAR tested 2026-11-03
+  (see docs/api-notes.md "Tested"). The token exchange and data calls are not tested yet.
 - Open questions are listed in `docs/family-and-dependents.md` ("Unverified").
   Resolve them on the first real grant and date the answer.
 - Prior art checked 2026-11-03: no Guava MCP server or agent plugin found.
