@@ -12,7 +12,7 @@
      "suggested": "<Name> Health Agent (personal CLI)"},
     {"label": "Redirect URIs", "hint": "one per line, exact match", "placeholder": "https://example.com/oauth/callback", "required": true,
      "suggested": "https://localhost:8765/callback",
-     "note": "Must match GUAVA_REDIRECT_URI exactly. Guava is https-only; scripts/guava.py serves this with a self-signed cert, or use auth --paste."},
+     "note": "Must match GUAVA_REDIRECT_URI exactly. Guava is https-only; guava serves this with a self-signed cert, or use auth --paste."},
     {"label": "Purpose", "hint": "for internal review", "placeholder": "What your API app does and why it needs the scopes you request", "required": true,
      "template": "Personal/family self-management tool run by the account holder on their own machine (confidential client, secret stored locally). Used by {holder} managing their own profile{dependents_clause} on a Guava {plan} plan: logging medication doses (med_usage), symptoms, mood/energy, journal notes, temperature, weight and other readings, and reading back logs, sleep, activity, vitals and clinical records for review and summaries. Single-user, no third-party data sharing."}
   ],
@@ -77,7 +77,7 @@
   },
   "presets": {
     "family-manager": {
-      "description": "Holder + dependents, log and review everything. Read+Write on all non-clinical rows, Read on all clinical rows. FHIR is read-only, so clinical Write boxes stay empty. Produces reference/scopes-full.txt (44 scopes).",
+      "description": "Holder + dependents, log and review everything. Read+Write on all non-clinical rows, Read on all clinical rows. FHIR is read-only, so clinical Write boxes stay empty. Produces guava_cli/scopes-full.txt (44 scopes).",
       "top_level": ["offline_access", "launch/patient"],
       "read_write": ["Activity & fitness", "Vitals", "Body composition", "Logging"],
       "read_only": ["Clinical records (FHIR USCDI)"]

@@ -44,23 +44,30 @@ child, and what the API can't do yet: [docs/family-and-dependents.md](docs/famil
    [docs/creating-the-api-app.md](docs/creating-the-api-app.md). Machine-readable form
    map and presets: [reference/app-form.json](reference/app-form.json). Or ask the agent:
    "create my Guava API app" (skill `create-api-app`).
-2. Export the credentials the portal gives you:
+2. Install the CLI (uv, Python 3.9+):
+   ```
+   uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'
+   # with NFC tag writing on a USB reader:
+   uv tool install 'guava-cli[nfc] @ git+https://github.com/danielrosehill/Guava-Health-Plugin'
+   ```
+   This installs `guava` and `guava-nfc`. `guava schema` prints every entry type, field and unit as JSON.
+3. Export the credentials the portal gives you:
    ```
    GUAVA_CLIENT_ID=…  GUAVA_CLIENT_SECRET=…
    # optional: GUAVA_REDIRECT_URI (default https://localhost:8765/callback),
    #           GUAVA_ENV=test (sandbox), GUAVA_HOME (default ~/.config/guava-health)
    ```
-3. Connect each profile:
+4. Connect each profile:
    ```
-   python3 scripts/guava.py auth --profile me
-   python3 scripts/guava.py auth --profile child   # choose the child on the consent screen
+   guava auth --profile me
+   guava auth --profile child   # choose the child on the consent screen
    ```
-4. Use it:
+5. Use it:
    ```
-   python3 scripts/guava.py log-med -p child --name "Paracetamol" --quantity 5 --time 2026-11-03T08:00
-   python3 scripts/guava.py metric  -p child --type body_temperature --value 38.4 --unit Cel
-   python3 scripts/guava.py search metrics -p me --types weight --start 2026-10-01
-   python3 scripts/guava.py fhir MedicationRequest -p me
+   guava log-med -p child --name "Paracetamol" --quantity 5 --time 2026-11-03T08:00
+   guava metric  -p child --type body_temperature --value 38.4 --unit Cel
+   guava search metrics -p me --types weight --start 2026-10-01
+   guava fhir MedicationRequest -p me
    ```
    Every write takes `--dry-run` and `--id` (idempotency key).
 

@@ -40,7 +40,7 @@ id prefix). Redirect URIs and scopes stay editable on the same page (**Save chan
 ## Which boxes
 
 For a holder who also manages dependents, the plugin's default (`family-manager` preset,
-44 scopes, `reference/scopes-full.txt`):
+44 scopes, `guava_cli/scopes-full.txt`):
 
 - Both top-level boxes.
 - Read + Write on every row in Activity & fitness, Vitals, Body composition and Logging.
@@ -48,17 +48,17 @@ For a holder who also manages dependents, the plugin's default (`family-manager`
   there does nothing.
 
 Narrower presets (`medication-logger`, `read-only-review`) are in `reference/app-form.json`.
-If you tick fewer boxes than `scopes-full.txt`, `guava.py auth` fails with
+If you tick fewer boxes than `scopes-full.txt`, `guava auth` fails with
 `invalid_scope`. Pass `--scopes "<your list>"`, or edit a copy of the file and use `--scopes-file`.
 
 ## Redirect URI choices
 
 Guava is https-only. Options, best first:
 
-1. `https://localhost:8765/callback` (default). `guava.py auth` serves it with a
+1. `https://localhost:8765/callback` (default). `guava auth` serves it with a
    self-signed certificate it makes in `~/.config/guava-health/localhost-cert/`. The
    browser warns once; proceed and the code is captured.
-2. Same URI with `guava.py auth --paste`. Don't run a listener: after consent the browser
+2. Same URI with `guava auth --paste`. Don't run a listener: after consent the browser
    shows an error page, so copy the URL from the address bar and paste it in.
 3. A real https page you own that echoes the query string. Use `--paste`.
 

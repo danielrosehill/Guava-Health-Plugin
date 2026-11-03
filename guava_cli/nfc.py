@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make your own Guava Tags: write https://guavahealth.com/nfc/<id> to blank NFC tags.
+"""guava-nfc: make your own Guava Tags (unofficial; not made by Guava Health, Inc.): write https://guavahealth.com/nfc/<id> to blank NFC tags.
 
 A Guava Tag holds no health data. It is a URL with a unique id, plus an Android
 Application Record so Android opens the Guava app. Tapping a new id opens Guava's
@@ -15,7 +15,7 @@ Commands (JSON on stdout):
   list                                  ids recorded locally
 
 The write and read commands need pyscard and a running pcscd service:
-  uv run --with pyscard scripts/guava_nfc.py write --id <id>
+  uv tool install 'guava-cli[nfc] @ git+https://github.com/danielrosehill/Guava-Health-Plugin'
 Without a PC/SC reader, use `ndef --out tag.ndef` and any NDEF writer: a phone app
 (add a URL record, then an "Application" record com.guavahealth.app) or another CLI.
 """
@@ -121,7 +121,7 @@ def connect(timeout: int = 30):
         from smartcard.System import readers
         from smartcard.Exceptions import NoCardException, CardConnectionException
     except ImportError:
-        die("pyscard not installed", hint="uv run --with pyscard scripts/guava_nfc.py ...")
+        die("pyscard not installed", hint="Install the nfc extra: uv tool install 'guava-cli[nfc] @ git+https://github.com/danielrosehill/Guava-Health-Plugin'")
     rs = readers()
     if not rs:
         die("No PC/SC reader found", hint="Plug in the reader and start pcscd (systemctl start pcscd)")
@@ -231,7 +231,7 @@ def cmd_list(a) -> None:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(prog="guava_nfc.py", description=__doc__,
+    p = argparse.ArgumentParser(prog="guava-nfc", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("new-id"); s.add_argument("--count", type=int, default=1); s.add_argument("--label"); s.set_defaults(fn=cmd_new_id)

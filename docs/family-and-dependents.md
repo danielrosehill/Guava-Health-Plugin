@@ -11,8 +11,8 @@ profile**. A parent on a family plan who wants to manage their child's data does
 1. Create one API app (see `docs/creating-the-api-app.md`). The scopes you tick apply to
    every profile you will grant for, so pick them for the union of what you want to do
    for yourself and for the child.
-2. Run the OAuth flow **once for yourself**: `guava.py auth --profile me`.
-3. Run it **again for the child**: `guava.py auth --profile child`. Sign in as the same
+2. Run the OAuth flow **once for yourself**: `guava auth --profile me`.
+3. Run it **again for the child**: `guava auth --profile child`. Sign in as the same
    account holder; on Guava's consent screen choose the child's profile.
 4. The plugin stores one token pair per label. Every command takes `--profile <label>`.
 
@@ -59,7 +59,7 @@ yourself by declining rows when you authorise their profile, or by passing
   anyway; tick them so the grant is ready when Guava adds the endpoints.
 - **No edit or delete.** Writes are append-only from the API. Correct or remove an entry
   in the Guava app. To avoid duplicates on retry, send an `identifier`
-  (`guava.py ... --id <key>`). Guava ignores an entry that reuses one.
+  (`guava ... --id <key>`). Guava ignores an entry that reuses one.
 - **No managing a medication's details** (dose, schedule, stopping it). `med_usage`
   creates the medication by name if it doesn't exist. Use the exact name already in the
   profile to avoid creating near-duplicates.

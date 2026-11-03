@@ -17,11 +17,11 @@ Condensed from https://guavahealth.com/api-portal/documentation (signed-in page,
   `Python-urllib/x` agent on both hosts. Any named agent works.
 - **Test clients only work on the sandbox.** Ids look like `guava_test_client_…`. On
   `api.guavahealth.com` they get `invalid_client`, and on `api-test.guavahealth.com` they are
-  accepted. `guava.py` infers `GUAVA_ENV=test` from that prefix.
+  accepted. `guava` infers `GUAVA_ENV=test` from that prefix.
 - **PAR needs `response_type=code` and `client_id` in the form body**, even with HTTP
   Basic client auth. Without `client_id`: `invalid_request "client_id is required."`.
   Without `response_type`: `unsupported_response_type`.
-- PAR with all 44 scopes of `reference/scopes-full.txt` returns `201 {request_uri, expires_in: 600}` on the sandbox.
+- PAR with all 44 scopes of `guava_cli/scopes-full.txt` returns `201 {request_uri, expires_in: 600}` on the sandbox.
 - **Sandbox grants a synthetic test patient**, not your real profile. The consent flow
   signs you in with your real Guava account, but the grant is for a fixture patient (with
   its own `/v1/me` name and FHIR Patient id) that already has metrics, sleep, activities,

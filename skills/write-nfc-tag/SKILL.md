@@ -8,25 +8,26 @@ compatibility: Python 3.9+. Writing with a USB PC/SC reader needs pyscard (uv ru
 # Write a Guava NFC tag
 
 Background and format: `docs/nfc-tags.md`.
-`N="python3 ${CLAUDE_PLUGIN_ROOT}/scripts/guava_nfc.py"`.
+Command: `guava-nfc`. If it's missing, install it with the reader extra:
+`uv tool install 'guava-cli[nfc] @ git+https://github.com/danielrosehill/Guava-Health-Plugin'`.
 
 1. **What and for whom.** Ask what each tag is for (e.g. "Lexapro bottle", "evening meds",
    "child: inhaler") and how many. That goes in `--label`, which is a local note only. The
    real binding is set in Guava when the tag is first tapped.
-2. **Ids.** `$N new-id --count <n> --label "<label>"`. Each tag gets its own id, recorded in
+2. **Ids.** `guava-nfc new-id --count <n> --label "<label>"`. Each tag gets its own id, recorded in
    `$GUAVA_HOME/nfc-tags.json`. Never reuse an id across tags.
 3. **Pick the writer** that's available:
    - **PC/SC reader:** check `pcsc_scan` (or `systemctl is-active pcscd`). Then
-     `uv run --with pyscard $N write --id <id> --label "<label>"`. Ask the user to put the
+     `guava-nfc write --id <id> --label "<label>"`. Ask the user to put the
      tag on the reader when stderr says so. Success is `"ok": true` with `read_back` equal to
      the URL. One tag at a time: wait for the user to swap tags between writes.
-   - **Another NFC CLI** on the machine: `$N ndef --id <id> --out /tmp/<id>.ndef` and feed it
+   - **Another NFC CLI** on the machine: `guava-nfc ndef --id <id> --out /tmp/<id>.ndef` and feed it
      the raw NDEF file, or `ntag_tlv_hex` for page-level writes from page 4.
    - **Phone:** give the user the URL and the two records to add in their NFC app
      (URL record, then Application record `com.guavahealth.app`).
 4. **Don't lock** unless the user insists and understands it's permanent (`--lock`). Locking
    isn't needed: what the tag logs is changed in Guava, not on the tag.
-5. **Verify** with `uv run --with pyscard $N read` if a reader is present.
+5. **Verify** with `guava-nfc read` if a reader is present.
 6. **Set it up:** the user taps the tag with a phone signed in to Guava, or opens the URL
    in a signed-in browser. "Let's set up your Guava Tag" appears. Choose the **Profile**
    (yourself or a dependent), then what it logs. Rebinding later: Guava menu → Guava Tags → Edit.

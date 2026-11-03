@@ -15,21 +15,25 @@ anything as if Guava made, endorses or supports it.
    "tested" means a real call succeeded. Mark which.
 3. **The form map is data.** `reference/app-form.json` is the single source for form
    labels, scopes and presets. `docs/creating-the-api-app.md` is its human version, and
-   `reference/scopes-full.txt` is the `family-manager` preset. Change all three together.
+   `guava_cli/scopes-full.txt` is the `family-manager` preset. Change all three together.
 4. **Writes only on a clear instruction.** There is no API undo. Use `--dry-run` when any
    field was inferred, and `--id` for retries.
 
 ## Layout
 
-- `scripts/guava_nfc.py`: DIY Guava Tag writer (NDEF build, PC/SC NTAG write and read, local id registry).
-- `scripts/guava.py`: stdlib CLI (auth with PAR+PKCE, rotating refresh, per-profile tokens, reads, writes). JSON out.
+- `guava_cli/`: Python package `guava-cli` (pyproject.toml, hatchling, no core dependencies).
+  `uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'` installs two commands:
+  - `guava` (`cli.py`): auth with PAR+PKCE, rotating refresh, per-profile tokens, reads, writes, `schema`, `scopes`, `version`. JSON out.
+  - `guava-nfc` (`nfc.py`): DIY Guava Tag writer. The `[nfc]` extra adds pyscard.
+  - `scopes-full.txt`: the family-manager preset, shipped inside the package.
+  Skills call `guava` / `guava-nfc` and install them if missing. Bump `__init__.py`, pyproject and plugin.json versions together.
 - `skills/*/SKILL.md`: create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, write-nfc-tag.
 - `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags.
-- `reference/`: app-form.json, scopes-full.txt.
+- `reference/`: app-form.json.
 
 ## State (2026-11-03)
 
-- NFC: a random 12-character id opened Guava's tag setup dialog with a profile picker that includes dependents (tested). Writing to a physical tag with guava_nfc.py has not been tested yet.
+- NFC: a random 12-character id opened Guava's tag setup dialog with a profile picker that includes dependents (tested). Writing to a physical tag with guava-nfc has not been tested yet.
 
 - Built from the signed-in docs page and the New App form. The full sandbox loop was tested
   2026-11-03 (auth, reads, FHIR, writes; see docs/api-notes.md "Tested"). Live is untested:

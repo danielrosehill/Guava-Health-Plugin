@@ -1,6 +1,6 @@
 {
   "name": "guava-health",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Unofficial agent plugin for the Guava Health API (OAuth 2.1): log medication doses, symptoms, mood, journal notes and readings, and review metrics, sleep, activity and clinical records, for the account holder and for dependents on a family plan (one grant per profile). Includes a skill that fills in Guava's API app form, with a documented scope map.",
   "author": {"name": "Daniel Rosehill", "url": "https://github.com/danielrosehill"},
   "repository": "https://github.com/danielrosehill/Guava-Health-Plugin",

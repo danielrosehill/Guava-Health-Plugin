@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Guava Health API client for agents. Standard library only (Python 3.9+).
+"""guava: unofficial Guava Health API client for agents. Standard library only (Python 3.9+).
+
+Not made or endorsed by Guava Health, Inc.
 
 One OAuth grant = one Guava profile. The account holder grants once for
 themselves and once per dependent (choosing the dependent on Guava's consent
@@ -36,8 +38,7 @@ from pathlib import Path
 
 API_BASE = {"live": "https://api.guavahealth.com", "test": "https://api-test.guavahealth.com"}
 AUTHORIZE_URL = "https://guavahealth.com/oauth/authorize"
-REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SCOPES_FILE = REPO_ROOT / "reference" / "scopes-full.txt"
+DEFAULT_SCOPES_FILE = Path(__file__).resolve().parent / "scopes-full.txt"
 
 DATA_ENTRY_TYPES = {
     "med_usage", "symptoms", "bowel_movement", "journal", "mood", "energy",
@@ -81,7 +82,9 @@ def home() -> Path:
     return p
 
 
-USER_AGENT = "guava-health-plugin/0.1 (+https://github.com/danielrosehill/Guava-Health-Plugin)"
+from . import __version__
+
+USER_AGENT = f"guava-cli/{__version__} (+https://github.com/danielrosehill/Guava-Health-Plugin)"
 
 
 def guava_env() -> str:
@@ -171,8 +174,22 @@ def load_token(profile: str) -> dict:
     p = token_path(profile)
     if not p.exists():
         die(f"No grant stored for profile '{profile}'",
-            hint=f"Run: guava.py auth --profile {profile}")
-    return json.loads(p.read_text())
+            hint=f"Run: guava auth --profile {profile}")
+    tok = json.loads(p.read_text())
+    use_env(tok.get("env"))
+    return tok
+
+
+def use_env(e: str | None) -> None:
+    """Make API host and client credentials follow the grant's environment. A sandbox
+    grant needs the test client; if GUAVA_CLIENT_ID is a live key, use GUAVA_TEST_CLIENT_*."""
+    if e not in API_BASE:
+        return
+    os.environ["GUAVA_ENV"] = e
+    if e == "test" and not os.environ.get("GUAVA_CLIENT_ID", "").startswith("guava_test_") \
+            and os.environ.get("GUAVA_TEST_CLIENT_ID"):
+        os.environ["GUAVA_CLIENT_ID"] = os.environ["GUAVA_TEST_CLIENT_ID"]
+        os.environ["GUAVA_CLIENT_SECRET"] = os.environ.get("GUAVA_TEST_CLIENT_SECRET", "")
 
 
 def access_token(profile: str) -> str:
@@ -182,7 +199,7 @@ def access_token(profile: str) -> str:
         return tok["access_token"]
     if not tok.get("refresh_token"):
         die(f"Access token for '{profile}' expired and no refresh token (offline_access not granted)",
-            hint=f"Run: guava.py auth --profile {profile}")
+            hint=f"Run: guava auth --profile {profile}")
     # Refresh tokens rotate: persist the new pair before using either.
     new = http("POST", api_base() + "/oauth/token",
                form={"grant_type": "refresh_token", "refresh_token": tok["refresh_token"]},
@@ -282,13 +299,13 @@ def start_flow(a) -> dict:
             "instruction": ("Open the URL, sign in as the account holder and, on the consent "
                             f"screen, choose the profile for '{a.profile}' (yourself or a dependent). "
                             "You land on the redirect URI; if that page fails to load, copy the "
-                            f"full address and run: guava.py auth -p {a.profile} --finish '<url>'")}
+                            f"full address and run: guava auth -p {a.profile} --finish '<url>'")}
 
 
 def finish_flow(profile: str, returned: str) -> None:
     pp = pending_path(profile)
     if not pp.exists():
-        die(f"No pending authorisation for '{profile}'", hint=f"Run: guava.py auth -p {profile} --start")
+        die(f"No pending authorisation for '{profile}'", hint=f"Run: guava auth -p {profile} --start")
     pend = json.loads(pp.read_text())
     q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(returned.strip()).query))
     if "error" in q:
@@ -377,7 +394,30 @@ def post_entries(profile: str, type_: str, entries: list[dict], dry: bool) -> No
     out(api(profile, "POST", "/v1/data-entries", body=body))
 
 
+def json_entries(a) -> list[dict] | None:
+    """--json: one entry object or a list of them (string, @file or - for stdin)."""
+    if not getattr(a, "json", None):
+        return None
+    raw = sys.stdin.read() if a.json == "-" else (
+        Path(a.json[1:]).read_text() if a.json.startswith("@") else a.json)
+    try:
+        v = json.loads(raw)
+    except ValueError as e:
+        die(f"--json is not valid JSON: {e}")
+    items = v if isinstance(v, list) else [v]
+    for it in items:
+        if not isinstance(it, dict):
+            die("--json entries must be objects")
+        it["time"] = iso(it.get("time"))
+    return items
+
+
 def cmd_log_med(a) -> None:
+    many = json_entries(a)
+    if many is not None:
+        post_entries(a.profile, "med_usage", many, a.dry_run); return
+    if not a.name:
+        die("--name is required (or pass --json)")
     e = {"time": iso(a.time), "medication_name": a.name}
     if a.quantity is not None:
         e["quantity"] = a.quantity
@@ -389,6 +429,9 @@ def cmd_log_med(a) -> None:
 def cmd_log(a) -> None:
     if a.type not in DATA_ENTRY_TYPES:
         die(f"type must be one of {sorted(DATA_ENTRY_TYPES)}")
+    many = json_entries(a)
+    if many is not None:
+        post_entries(a.profile, a.type, many, a.dry_run); return
     e = {"time": iso(a.time)}
     for kv in a.field or []:
         k, _, v = kv.partition("=")
@@ -459,10 +502,58 @@ def cmd_fhir(a) -> None:
     out(api(a.profile, "GET", path))
 
 
+# ---------------------------------------------------------------- introspection
+
+SCHEMA = {
+    "data_entries": {
+        "_endpoint": "POST /v1/data-entries via `guava log --type T` (or `guava log-med`)",
+        "_common": {"time": "ISO 8601 with offset (default now)", "notes": "optional, <=10000 chars",
+                    "identifier": "optional [{value, system?}], set by --id"},
+        "med_usage": {"medication_name": "str <=255, exact name; new name creates a medication",
+                      "quantity": "number 0.001-1000, default 1"},
+        "symptoms": {"symptom_name": "str <=255; new name creates a symptom", "severity": "int 0-10, optional"},
+        "mood": {"value": "int 1-5", "tags": "optional list of <=20 labels"},
+        "energy": {"value": "int 1-5"},
+        "journal": {"notes": "required"},
+        "bowel_movement": {"bristol_type": "int 1-7, optional", "end_time": "optional", "tags": "optional"},
+        "menstrual_cycle": {"flow": "none|light|medium|heavy, optional"},
+        "sexual_activity": {"tags": "optional; profile must be 18+"},
+    },
+    "metrics": {
+        "_endpoint": "POST /v1/metrics via `guava metric`; read via `guava search metrics --types`",
+        "units": {"weight": "kg|[lb_av]", "height": "cm|m|[in_i]", "body_temperature": "Cel|[degF]",
+                  "systolic_blood_pressure": "mm[Hg]", "diastolic_blood_pressure": "mm[Hg]",
+                  "blood_glucose": "mg/dL|mmol/L (method blood|interstitial required)",
+                  "heart_rate": "/min", "resting_heart_rate": "/min", "respiratory_rate": "/min",
+                  "heart_rate_variability": "ms (method sdnn|rmssd required)", "oxygen_saturation": "%",
+                  "vo2_max": "mL/kg/min", "steps": "(none)", "body_fat": "%", "body_water": "%",
+                  "bone_mass": "kg|[lb_av]", "muscle_mass": "kg|[lb_av]", "lean_mass": "kg|[lb_av]"},
+        "read_alone": ["steps", "heart_rate_variability", "resting_heart_rate", "vo2_max",
+                       "oxygen_saturation", "respiratory_rate", "blood_glucose", "heart_rate"],
+    },
+    "search": sorted(SEARCH_RESOURCES),
+    "fhir": sorted(FHIR_RESOURCES),
+    "not_supported_by_api_2026_11_03": ["reading data entries", "editing or deleting any entry",
+                                        "managing medications"],
+}
+
+
+def cmd_schema(a) -> None:
+    out(SCHEMA if not a.section else SCHEMA.get(a.section) or die(f"sections: {list(SCHEMA)}"))
+
+
+def cmd_scopes(a) -> None:
+    out(DEFAULT_SCOPES_FILE.read_text().split())
+
+
+def cmd_version(a) -> None:
+    out({"guava_cli": __version__, "env": guava_env(), "api": api_base(), "home": str(home())})
+
+
 # ---------------------------------------------------------------- cli
 
 def main() -> None:
-    p = argparse.ArgumentParser(prog="guava.py", description=__doc__,
+    p = argparse.ArgumentParser(prog="guava", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -472,7 +563,7 @@ def main() -> None:
         return sp
 
     s = prof(sub.add_parser("auth", help="grant access for one Guava profile"))
-    s.add_argument("--scopes", help="space-separated scope string (default: reference/scopes-full.txt)")
+    s.add_argument("--scopes", help="space-separated scope string (default: the bundled family-manager preset, see `guava scopes`)")
     s.add_argument("--scopes-file", default=str(DEFAULT_SCOPES_FILE))
     s.add_argument("--paste", action="store_true", help="paste the redirect URL instead of running a local listener")
     s.add_argument("--start", action="store_true", help="only print the consent URL and save the pending state")
@@ -482,11 +573,17 @@ def main() -> None:
     s.set_defaults(fn=cmd_auth)
 
     sub.add_parser("profiles", help="list stored grants").set_defaults(fn=cmd_profiles)
+    s = sub.add_parser("schema", help="entry types, fields and units (JSON)")
+    s.add_argument("section", nargs="?", help="data_entries | metrics | search | fhir")
+    s.set_defaults(fn=cmd_schema)
+    sub.add_parser("scopes", help="the bundled family-manager scope list").set_defaults(fn=cmd_scopes)
+    sub.add_parser("version", help="version, environment, API host").set_defaults(fn=cmd_version)
     prof(sub.add_parser("me", help="GET /v1/me")).set_defaults(fn=cmd_me)
     prof(sub.add_parser("revoke", help="revoke and forget a grant")).set_defaults(fn=cmd_revoke)
 
     s = prof(sub.add_parser("log-med", help="log a medication dose (med_usage)"))
-    s.add_argument("--name", required=True)
+    s.add_argument("--name")
+    s.add_argument("--json", help="entry object or list (JSON string, @file, or -)")
     s.add_argument("--quantity", type=float)
     s.add_argument("--time", default="now")
     s.add_argument("--notes")
@@ -497,6 +594,7 @@ def main() -> None:
     s = prof(sub.add_parser("log", help="write a self-reported data entry"))
     s.add_argument("--type", required=True, help=", ".join(sorted(DATA_ENTRY_TYPES)))
     s.add_argument("--field", "-f", action="append", help="key=value, e.g. symptom_name=Cough, severity=4, tags=a,b")
+    s.add_argument("--json", help="entry object or list (JSON string, @file, or -); see `guava schema`")
     s.add_argument("--time", default="now")
     s.add_argument("--notes")
     s.add_argument("--id")

@@ -26,7 +26,7 @@ bytes) and anything bigger. Some older DIY scripts used prefix `0x02`, which is
   and for whom is set on first tap and stored in the Guava account. Per Guava's tag
   instructions you can change it later (menu → Guava Tags → select → Edit), so a tag never
   needs rewriting.
-- Ids from Guava's own tags are also 12 characters. `guava_nfc.py new-id` produces the same shape.
+- Ids from Guava's own tags are also 12 characters. `guava-nfc new-id` produces the same shape.
 - Not tested: whether Guava rejects ids of other lengths, and what happens if two people
   write the same id. Random 12-character ids make collisions negligible.
 
@@ -35,11 +35,11 @@ bytes) and anything bigger. Some older DIY scripts used prefix `0x02`, which is
 - **Tags:** NTAG213, 215 or 216 stickers or cards (NDEF-formatted, which is the default).
   For pill bottles that go through a dishwasher, pick waterproof or epoxy tags.
 - **Writers:**
-  - A USB PC/SC reader (ACS ACR122U, ACR1252U…) plus `pcscd`. `scripts/guava_nfc.py write`
+  - A USB PC/SC reader (ACS ACR122U, ACR1252U…) plus `pcscd`. `guava-nfc write`
     drives it directly.
   - Or a phone. Use an NFC writer app (e.g. NFC Tools): add a URL record with the tag URL,
     add an "Application" record `com.guavahealth.app`, then write.
-  - Or any other NDEF CLI. `guava_nfc.py ndef --out tag.ndef` gives the raw NDEF message,
+  - Or any other NDEF CLI. `guava-nfc ndef --out tag.ndef` gives the raw NDEF message,
     and `ntag_tlv_hex` is the TLV-wrapped form for raw page writes starting at page 4.
 
 ## Phones

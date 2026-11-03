@@ -29,7 +29,7 @@ strings and presets. Background for humans: `docs/creating-the-api-app.md`.
    in row order. Every row has a `Read` and a `Write` checkbox, so locate them through the
    row's label, not the bare word "Read".
 6. Read the **Resulting scope string** textbox and compare it with the preset (for
-   `family-manager`, the content of `reference/scopes-full.txt`, 44 lines). Fix any difference.
+   `family-manager`, the content of `guava_cli/scopes-full.txt`, 44 lines). Fix any difference.
 7. Do **not** click Create App. Show the user the name, redirect URI and scope count, and
    ask them to review and click it themselves (some agent harnesses block this click anyway).
 8. After creation, the portal shows a client id and a secret. Tell the user to store them in
