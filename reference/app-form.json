@@ -1,0 +1,101 @@
+{
+  "_about": "Machine-readable map of Guava's 'New API App' form, for an agent filling it on a user's behalf. Observed 2026-11-03 at https://guavahealth.com/api-portal/apps (button 'New App' opens a dialog). Labels are the accessible names; checkboxes are role=checkbox buttons (not <input>), so click them, don't set .checked. Re-verify labels before relying on this file: if a label is missing, the form has changed.",
+  "portal": {
+    "apps_url": "https://guavahealth.com/api-portal/apps",
+    "documentation_url": "https://guavahealth.com/api-portal/documentation",
+    "open_dialog": "button 'New App'",
+    "submit": "button 'Create App' (type=submit). Irreversible-ish: the user confirms first.",
+    "cancel": "button 'Cancel'"
+  },
+  "text_fields": [
+    {"label": "App Name", "placeholder": "My Health App", "required": true,
+     "suggested": "<Name> Health Agent (personal CLI)"},
+    {"label": "Redirect URIs", "hint": "one per line, exact match", "placeholder": "https://example.com/oauth/callback", "required": true,
+     "suggested": "https://localhost:8765/callback",
+     "note": "Must match GUAVA_REDIRECT_URI exactly. Guava is https-only; scripts/guava.py serves this with a self-signed cert, or use auth --paste."},
+    {"label": "Purpose", "hint": "for internal review", "placeholder": "What your API app does and why it needs the scopes you request", "required": true,
+     "template": "Personal/family self-management tool run by the account holder on their own machine (confidential client, secret stored locally). Used by {holder} managing their own profile{dependents_clause} on a Guava {plan} plan: logging medication doses (med_usage), symptoms, mood/energy, journal notes, temperature, weight and other readings, and reading back logs, sleep, activity, vitals and clinical records for review and summaries. Single-user, no third-party data sharing."}
+  ],
+  "top_level_checkboxes": [
+    {"label": "Long-lived background access", "scope": "offline_access", "recommend": true, "why": "Without it no refresh token is issued and every grant dies after expires_in (3600 s)."},
+    {"label": "Patient ID for this connection", "scope": "launch/patient", "recommend": true, "why": "Returns the FHIR Patient id of the granted profile in token responses; distinguishes holder vs dependent grants."}
+  ],
+  "scope_grid": {
+    "_columns": "Each row has a 'Read' and a 'Write' checkbox. Read alone -> .rs; Write alone -> .cud; both -> .cruds.",
+    "Activity & fitness": [
+      {"row": "Sleep + sleep stages", "scope": "patient/sleep", "api": "read+write"},
+      {"row": "Steps", "scope": "patient/steps", "api": "read+write (via /v1/metrics)"},
+      {"row": "Activities (workouts, etc.)", "scope": "patient/activities", "api": "read+write"},
+      {"row": "VO₂ max", "scope": "patient/vo2_max", "api": "read+write (via /v1/metrics)"}
+    ],
+    "Vitals": [
+      {"row": "Heart rate", "scope": "patient/heart_rate", "api": "read+write"},
+      {"row": "Resting heart rate", "scope": "patient/resting_heart_rate", "api": "read+write"},
+      {"row": "Heart rate variability", "scope": "patient/heart_rate_variability", "api": "read+write"},
+      {"row": "Oxygen saturation (SpO₂)", "scope": "patient/oxygen_saturation", "api": "read+write"},
+      {"row": "Respiratory rate", "scope": "patient/respiratory_rate", "api": "read+write"},
+      {"row": "Blood pressure", "scope": "patient/blood_pressure", "api": "read+write"},
+      {"row": "Blood glucose", "scope": "patient/blood_glucose", "api": "read+write"},
+      {"row": "Body temperature", "scope": "patient/body_temperature", "api": "read+write"}
+    ],
+    "Body composition": [
+      {"row": "Weight", "scope": "patient/weight", "api": "read+write"},
+      {"row": "Height", "scope": "patient/height", "api": "read+write"},
+      {"row": "Body composition (fat %, muscle, bone, water, lean mass)", "scope": "patient/body_composition", "api": "read+write"}
+    ],
+    "Logging": [
+      {"row": "Nutrition (food, alcohol, caffeine)", "scope": "patient/nutrition", "api": "read+write"},
+      {"row": "Water", "scope": "patient/water", "api": "read+write"},
+      {"row": "Menstrual cycle", "scope": "patient/menstrual_cycle", "api": "write only (no documented read endpoint)"},
+      {"row": "Sexual activity", "scope": "patient/sexual_activity", "api": "write only; profile must be 18+"},
+      {"row": "Mood", "scope": "patient/mood", "api": "write only (no documented read endpoint)"},
+      {"row": "Energy", "scope": "patient/energy", "api": "write only (no documented read endpoint)"},
+      {"row": "Symptoms", "scope": "patient/symptoms", "api": "write only (no documented read endpoint)"},
+      {"row": "Journal entries", "scope": "patient/journal", "api": "write only (no documented read endpoint)"},
+      {"row": "Bowel movement", "scope": "patient/bowel_movement", "api": "write only (no documented read endpoint)"},
+      {"row": "Urination", "scope": "patient/urination", "api": "no documented endpoint yet"},
+      {"row": "Medication usage", "scope": "patient/med_usage", "api": "write only (no documented read endpoint)"},
+      {"row": "Family history", "scope": "patient/family_history", "api": "no documented endpoint yet"}
+    ],
+    "Clinical records (FHIR USCDI)": [
+      {"row": "Patient demographics and contact info", "scope": "patient/Patient", "api": "read (FHIR)"},
+      {"row": "Allergies & intolerances", "scope": "patient/AllergyIntolerance", "api": "read (FHIR)"},
+      {"row": "Conditions / problem list", "scope": "patient/Condition", "api": "read (FHIR)"},
+      {"row": "Encounters / visit history", "scope": "patient/Encounter", "api": "not yet served"},
+      {"row": "Immunizations", "scope": "patient/Immunization", "api": "read (FHIR)"},
+      {"row": "Medications", "scope": "patient/MedicationRequest", "api": "read (FHIR)"},
+      {"row": "Procedures", "scope": "patient/Procedure", "api": "read (FHIR)"},
+      {"row": "Diagnostic reports (lab / imaging)", "scope": "patient/DiagnosticReport", "api": "not yet served"},
+      {"row": "Observations (lab values, clinical vitals)", "scope": "patient/Observation", "api": "not yet served (some via /v1/metrics)"},
+      {"row": "Clinical documents & notes", "scope": "patient/DocumentReference", "api": "not yet served"},
+      {"row": "Care plans", "scope": "patient/CarePlan", "api": "not yet served"},
+      {"row": "Care team members", "scope": "patient/CareTeam", "api": "not yet served"},
+      {"row": "Providers", "scope": "patient/Practitioner", "api": "read (FHIR)"},
+      {"row": "Care goals", "scope": "patient/Goal", "api": "not yet served"},
+      {"row": "Record provenance", "scope": "patient/Provenance", "api": "not yet served"}
+    ]
+  },
+  "presets": {
+    "family-manager": {
+      "description": "Holder + dependents, log and review everything. Read+Write on all non-clinical rows, Read on all clinical rows. FHIR is read-only, so clinical Write boxes stay empty. Produces reference/scopes-full.txt (44 scopes).",
+      "top_level": ["offline_access", "launch/patient"],
+      "read_write": ["Activity & fitness", "Vitals", "Body composition", "Logging"],
+      "read_only": ["Clinical records (FHIR USCDI)"]
+    },
+    "medication-logger": {
+      "description": "Just dose logging and medication review.",
+      "top_level": ["offline_access", "launch/patient"],
+      "rows": {"Medication usage": "read+write", "Symptoms": "read+write", "Medications": "read", "Allergies & intolerances": "read"}
+    },
+    "read-only-review": {
+      "description": "Summaries only, no writes.",
+      "top_level": ["offline_access", "launch/patient"],
+      "read_only": ["Activity & fitness", "Vitals", "Body composition", "Logging", "Clinical records (FHIR USCDI)"]
+    }
+  },
+  "not_on_the_form": [
+    "There is no family/dependent/household scope. Dependents are chosen per grant on the consent screen; see docs/family-and-dependents.md.",
+    "The docs list a 'profile' scope for GET /v1/me, but the form has no 'profile' checkbox (2026-11-03)."
+  ],
+  "verify_after_filling": "Read the read-only textbox labelled 'Resulting scope string'. It lists one scope per line; compare it with the preset."
+}
