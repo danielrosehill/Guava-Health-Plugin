@@ -22,6 +22,23 @@ Condensed from https://guavahealth.com/api-portal/documentation (signed-in page,
   Basic client auth. Without `client_id`: `invalid_request "client_id is required."`.
   Without `response_type`: `unsupported_response_type`.
 - PAR with all 44 scopes of `reference/scopes-full.txt` returns `201 {request_uri, expires_in: 600}` on the sandbox.
+- **Sandbox grants a synthetic test patient**, not your real profile. The consent flow
+  signs you in with your real Guava account, but the grant is for a fixture patient (with
+  its own `/v1/me` name and FHIR Patient id) that already has metrics, sleep, activities,
+  nutrition, 12 MedicationRequests and 3 AllergyIntolerances. So holder and dependent
+  grants can only be tested with a live client.
+- **The full sandbox loop works** (2026-11-03): PAR → consent → `--finish` → token
+  (`refresh_token` and `patient` included) → `/v1/me` → all five `_search` reads → FHIR
+  `Patient`, `MedicationRequest` and `AllergyIntolerance` → writes to `/v1/data-entries`
+  (`med_usage`) and `/v1/metrics` (`body_temperature`), each `{"accepted":1,"environment":"test"}`.
+- **`profile` is granted automatically.** Token `scope` came back with the 44 requested
+  plus `profile`, although the form has no box for it. `/v1/me` works.
+- **Identifiers did not dedupe in the sandbox.** Posting the same `med_usage` entry twice
+  with the same `identifier` returned `accepted: 1` both times, although the docs say a
+  repeat is ignored. Don't rely on `--id` alone to prevent duplicates. Untested on live.
+- **Units in reads can differ from write units.** A sandbox weight came back as
+  `{"value":56310,"unit":"g"}`. Read `unit` on every entry rather than assuming `kg`.
+- **Some sleep timestamps have no offset** (e.g. `2026-08-06T22:42:00`), despite the docs.
 - How a test app gets a live client (review? toggle?) is not known yet.
 
 ## OAuth 2.1

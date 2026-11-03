@@ -29,8 +29,9 @@ Public plugin `guava-health`. Unofficial client for the Guava Health API.
 
 - NFC: a random 12-character id opened Guava's tag setup dialog with a profile picker that includes dependents (tested). Writing to a physical tag with guava_nfc.py has not been tested yet.
 
-- Built from the signed-in docs page and the New App form. Sandbox PAR tested 2026-11-03
-  (see docs/api-notes.md "Tested"). The token exchange and data calls are not tested yet.
+- Built from the signed-in docs page and the New App form. The full sandbox loop was tested
+  2026-11-03 (auth, reads, FHIR, writes; see docs/api-notes.md "Tested"). Live is untested:
+  test clients only reach a synthetic patient.
 - Open questions are listed in `docs/family-and-dependents.md` ("Unverified").
   Resolve them on the first real grant and date the answer.
 - Prior art checked 2026-11-03: no Guava MCP server or agent plugin found.

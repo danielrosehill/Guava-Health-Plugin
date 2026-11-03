@@ -68,8 +68,9 @@ yourself by declining rows when you authorise their profile, or by passing
 
 - Whether the consent screen lists dependents as a picker or needs a profile switch
   in the Guava web app before you start the flow.
-- Whether `/v1/me` needs the `profile` scope, which the form does not offer. The
-  plugin tries it and carries on if it's refused.
+- ~~Whether `/v1/me` needs the `profile` scope~~: `profile` is granted automatically (sandbox, 2026-11-03).
+- The sandbox (test client) always grants a synthetic test patient, so the dependent flow
+  can only be checked with a live client.
 - Whether one refresh token per profile is independent (expected, since they are separate grants).
 
 Record what you find here, with the date.
