@@ -251,13 +251,18 @@ def wait_for_callback(redirect_uri: str, timeout: int) -> str:
     return got["url"]
 
 
-def cmd_auth(a) -> None:
+def pending_path(profile: str) -> Path:
+    d = home() / "pending"
+    d.mkdir(exist_ok=True)
+    return d / f"{profile}.json"
+
+
+def start_flow(a) -> dict:
     redirect_uri = env("GUAVA_REDIRECT_URI", "https://localhost:8765/callback")
     scopes = a.scopes or " ".join(Path(a.scopes_file).read_text().split())
     verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b"=").decode()
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     state = secrets.token_urlsafe(24)
-
     # Tested 2026-11-03: PAR needs response_type=code and client_id in the body even
     # with Basic auth (neither is in Guava's docs).
     par = http("POST", api_base() + "/oauth/par", form={
@@ -267,46 +272,69 @@ def cmd_auth(a) -> None:
     }, headers={"Authorization": client_auth_header()})
     url = AUTHORIZE_URL + "?" + urllib.parse.urlencode(
         {"client_id": env("GUAVA_CLIENT_ID"), "request_uri": par["request_uri"]})
+    pend = {"verifier": verifier, "state": state, "redirect_uri": redirect_uri,
+            "expires_at": int(dt.datetime.now().timestamp()) + int(par.get("expires_in", 600))}
+    fd = os.open(pending_path(a.profile), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(pend, f)
+    return {"step": "open_consent", "profile": a.profile, "url": url,
+            "expires_in_seconds": int(par.get("expires_in", 600)),
+            "instruction": ("Open the URL, sign in as the account holder and, on the consent "
+                            f"screen, choose the profile for '{a.profile}' (yourself or a dependent). "
+                            "You land on the redirect URI; if that page fails to load, copy the "
+                            f"full address and run: guava.py auth -p {a.profile} --finish '<url>'")}
 
-    print(json.dumps({
-        "step": "open_consent",
-        "profile": a.profile,
-        "url": url,
-        "instruction": ("Sign in as the account holder. On the consent screen choose the "
-                        f"profile to grant for '{a.profile}' (yourself or a dependent)."),
-    }, indent=2), file=sys.stderr)
-    if not a.no_browser:
-        webbrowser.open(url)
 
-    if a.paste:
-        returned = input("Paste the full URL you were redirected to: ").strip()
-    else:
-        returned = wait_for_callback(redirect_uri, a.timeout)
-
-    q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(returned).query))
+def finish_flow(profile: str, returned: str) -> None:
+    pp = pending_path(profile)
+    if not pp.exists():
+        die(f"No pending authorisation for '{profile}'", hint=f"Run: guava.py auth -p {profile} --start")
+    pend = json.loads(pp.read_text())
+    q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(returned.strip()).query))
     if "error" in q:
         die("Authorisation refused", detail=q)
-    if q.get("state") != state:
+    if q.get("state") != pend["state"]:
         die("State mismatch: discard this redirect and start again")
     tok = http("POST", api_base() + "/oauth/token", form={
-        "grant_type": "authorization_code", "code": q["code"], "code_verifier": verifier,
-        "redirect_uri": redirect_uri,
+        "grant_type": "authorization_code", "code": q["code"], "code_verifier": pend["verifier"],
+        "redirect_uri": pend["redirect_uri"],
     }, headers={"Authorization": client_auth_header()})
-    save_token(a.profile, tok)
+    pp.unlink()
+    save_token(profile, tok)
     # /v1/me is documented under a "profile" scope that the app form does not offer
     # (2026-11-03); try it, but don't fail the grant if it is refused.
     try:
-        me = api(a.profile, "GET", "/v1/me")
+        me = api(profile, "GET", "/v1/me")
     except SystemExit:
         me = {"unavailable": "GET /v1/me refused; see stderr"}
     if isinstance(me, dict) and me.get("profile"):
-        tok = load_token(a.profile)
+        tok = load_token(profile)
         tok["profile_id"] = me["profile"].get("id")
         tok["profile_name"] = " ".join(filter(None, [me["profile"].get("given_name"),
                                                       me["profile"].get("family_name")]))
-        save_token(a.profile, tok)
-    out({"ok": True, "profile": a.profile, "granted_scopes": tok.get("scope", "").split(),
-         "me": me})
+        save_token(profile, tok)
+    out({"ok": True, "profile": profile, "granted_scopes": tok.get("scope", "").split(),
+         "patient": tok.get("patient"), "me": me})
+
+
+def cmd_auth(a) -> None:
+    """Default: one go with a local https listener. --start / --finish split it in two
+    so the consent screen can be opened on any device (phone, another machine) and the
+    final URL pasted back, which also suits agents that can't hold stdin open."""
+    if a.finish:
+        finish_flow(a.profile, a.finish); return
+    info = start_flow(a)
+    if a.start:
+        out(info); return
+    print(json.dumps(info, indent=2), file=sys.stderr)
+    if not a.no_browser:
+        webbrowser.open(info["url"])
+    pend = json.loads(pending_path(a.profile).read_text())
+    if a.paste:
+        returned = input("Paste the full URL you were redirected to: ")
+    else:
+        returned = wait_for_callback(pend["redirect_uri"], a.timeout)
+    finish_flow(a.profile, returned)
 
 
 def cmd_profiles(a) -> None:
@@ -447,6 +475,8 @@ def main() -> None:
     s.add_argument("--scopes", help="space-separated scope string (default: reference/scopes-full.txt)")
     s.add_argument("--scopes-file", default=str(DEFAULT_SCOPES_FILE))
     s.add_argument("--paste", action="store_true", help="paste the redirect URL instead of running a local listener")
+    s.add_argument("--start", action="store_true", help="only print the consent URL and save the pending state")
+    s.add_argument("--finish", metavar="URL", help="complete a --start with the URL you were redirected to")
     s.add_argument("--no-browser", action="store_true")
     s.add_argument("--timeout", type=int, default=300)
     s.set_defaults(fn=cmd_auth)

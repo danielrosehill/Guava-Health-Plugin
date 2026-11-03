@@ -19,12 +19,15 @@ Public plugin `guava-health`. Unofficial client for the Guava Health API.
 
 ## Layout
 
+- `scripts/guava_nfc.py`: DIY Guava Tag writer (NDEF build, PC/SC NTAG write and read, local id registry).
 - `scripts/guava.py`: stdlib CLI (auth with PAR+PKCE, rotating refresh, per-profile tokens, reads, writes). JSON out.
-- `skills/*/SKILL.md`: create-api-app, connect-profile, log-medication, log-health-entry, review-health-data.
-- `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app.
+- `skills/*/SKILL.md`: create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, write-nfc-tag.
+- `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags.
 - `reference/`: app-form.json, scopes-full.txt.
 
 ## State (2026-11-03)
+
+- NFC: a random 12-character id opened Guava's tag setup dialog with a profile picker that includes dependents (tested). Writing to a physical tag with guava_nfc.py has not been tested yet.
 
 - Built from the signed-in docs page and the New App form. Sandbox PAR tested 2026-11-03
   (see docs/api-notes.md "Tested"). The token exchange and data calls are not tested yet.

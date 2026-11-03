@@ -11,7 +11,8 @@ It lets an agent:
   (medications, allergies, conditions, immunizations, procedures);
 - do all of this **for dependents on a family plan** (e.g. a parent logging a child's
   doses), with one grant per profile;
-- **fill in Guava's "New API App" form for you**, with the scope boxes for a chosen preset.
+- **fill in Guava's "New API App" form for you**, with the scope boxes for a chosen preset;
+- **write your own Guava Tags** onto blank NFC stickers (tap to log a medication, a group or water), see [docs/nfc-tags.md](docs/nfc-tags.md).
 
 ## Family plans in one paragraph
 
@@ -47,6 +48,9 @@ child, and what the API can't do yet: [docs/family-and-dependents.md](docs/famil
    ```
    Every write takes `--dry-run` and `--id` (idempotency key).
 
+   If you're signing in on a phone or another machine, use `auth -p child --start`, open the
+   printed URL anywhere, then run `auth -p child --finish '<the URL you landed on>'`.
+
 ## Skills
 
 | Skill | For |
@@ -56,6 +60,7 @@ child, and what the API can't do yet: [docs/family-and-dependents.md](docs/famil
 | `log-medication` | Record a dose (`med_usage`) |
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
+| `write-nfc-tag` | Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |
 
 ## Limits of the Guava API (2026-11-03)
 

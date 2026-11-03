@@ -24,8 +24,10 @@ wrapper, prefix every call with it (e.g. `with-secrets $G …`).
 4. Tell the user: sign in as the account holder and, **for a dependent, pick the
    dependent's profile on the consent screen**. With the localhost redirect, the browser
    warns about a self-signed certificate once. Proceed past it.
-   If the user is on another machine or the listener can't bind, use `--paste --no-browser`
-   and have them paste the final URL.
+   **Remote / phone:** run `$G auth -p <label> --start`, which prints the URL and saves
+   the pending state (it expires in 10 min). Send the URL to the user. They sign in and land
+   on `https://localhost:8765/callback?code=…`, which fails to load. That's fine: they paste
+   the full address back, and you run `$G auth -p <label> --finish '<url>'`.
 5. On success the command prints `granted_scopes` and `me`. Check that `me.profile` is the
    intended person (holder vs child). If it's wrong, `$G revoke --profile <label>` and redo.
 6. If `invalid_scope` comes back, the app has fewer scopes than `reference/scopes-full.txt`.
