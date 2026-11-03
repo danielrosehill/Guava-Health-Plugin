@@ -1,0 +1,188 @@
+"""guava-mcp: thin MCP server over guava_cli (unofficial; not made by Guava Health, Inc.).
+
+Runs where the tokens live (e.g. a home server behind an MCP gateway) so every client
+shares one set of grants. Guava rotates refresh tokens on every use, so a grant must
+live in exactly one place. Tools mirror the CLI and return its JSON.
+
+Env: GUAVA_CLIENT_ID, GUAVA_CLIENT_SECRET (+ optional GUAVA_TEST_CLIENT_*), GUAVA_HOME
+(token dir, mount a volume), GUAVA_REDIRECT_URI, MCP_TRANSPORT (streamable-http | stdio),
+MCP_HOST (0.0.0.0), MCP_PORT (3000), MCP_STATELESS (true).
+"""
+from __future__ import annotations
+
+import contextlib
+import io
+import json
+import os
+import types
+from typing import Any
+
+from mcp.server.fastmcp import FastMCP
+
+from . import __version__
+from . import cli
+
+mcp = FastMCP(
+    "guava",
+    instructions=(
+        "Unofficial Guava Health client. Every data tool takes `profile`: the local label of a "
+        "grant (see `profiles`), e.g. the account holder or a dependent child. Writes are "
+        "append-only through the API (no edit/delete); pass `id` to make retries harmless. "
+        "Self-logged entries (doses, symptoms, mood) cannot be read back through the API. "
+        "Call `schema` for entry types, fields and units."),
+    host=os.environ.get("MCP_HOST", "0.0.0.0"),
+    port=int(os.environ.get("MCP_PORT", "3000")),
+    stateless_http=os.environ.get("MCP_STATELESS", "true").lower() == "true",
+)
+
+
+def _run(fn, **kw) -> Any:
+    """Call a cli command, capture its JSON stdout; turn die() into a returned error."""
+    ns = types.SimpleNamespace(**kw)
+    buf_out, buf_err = io.StringIO(), io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
+            fn(ns)
+    except SystemExit:
+        err = buf_err.getvalue().strip()
+        try:
+            return json.loads(err.splitlines()[-1])
+        except (ValueError, IndexError):
+            return {"error": err or "failed"}
+    text = buf_out.getvalue().strip()
+    try:
+        return json.loads(text) if text else {"ok": True}
+    except ValueError:
+        return {"output": text}
+
+
+def _snapshot_env():
+    # load_token() may switch GUAVA_ENV/credentials per grant; restore after each call
+    return {k: os.environ.get(k) for k in ("GUAVA_ENV", "GUAVA_CLIENT_ID", "GUAVA_CLIENT_SECRET")}
+
+
+def _restore_env(snap):
+    for k, v in snap.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
+
+def run(fn, **kw):
+    snap = _snapshot_env()
+    try:
+        return _run(fn, **kw)
+    finally:
+        _restore_env(snap)
+
+
+# ---------------------------------------------------------------- grants
+
+@mcp.tool()
+def profiles() -> Any:
+    """List connected Guava profiles (label, Guava name, environment, refresh token present)."""
+    return run(cli.cmd_profiles)
+
+
+@mcp.tool()
+def whoami(profile: str) -> Any:
+    """GET /v1/me for a grant: the granting user and the profile it acts on."""
+    return run(cli.cmd_me, profile=profile)
+
+
+@mcp.tool()
+def auth_start(profile: str, scopes: str | None = None) -> Any:
+    """Begin authorising a profile. Returns a consent URL (valid 10 min). The user opens
+    it, signs in as the account holder, SELECTS the profile (self or dependent) and
+    approves, then gives you the URL they land on for auth_finish."""
+    return run(cli.cmd_auth, profile=profile, start=True, finish=None, scopes=scopes,
+               scopes_file=str(cli.DEFAULT_SCOPES_FILE), paste=False, no_browser=True, timeout=0)
+
+
+@mcp.tool()
+def auth_finish(profile: str, redirect_url: str) -> Any:
+    """Complete auth_start with the full redirect URL (https://localhost:8765/callback?code=...&state=...)."""
+    return run(cli.cmd_auth, profile=profile, start=False, finish=redirect_url, scopes=None,
+               scopes_file=str(cli.DEFAULT_SCOPES_FILE), paste=False, no_browser=True, timeout=0)
+
+
+# ---------------------------------------------------------------- writes
+
+@mcp.tool()
+def log_medication(profile: str, medication_name: str, quantity: float | None = None,
+                   time: str = "now", notes: str | None = None, id: str | None = None,
+                   dry_run: bool = False) -> Any:
+    """Log a medication dose (med_usage). Use the exact name already in the profile; a new
+    name creates a new medication. time: ISO 8601 (local time assumed without offset) or 'now'."""
+    return run(cli.cmd_log_med, profile=profile, name=medication_name, quantity=quantity,
+               time=time, notes=notes, id=id, dry_run=dry_run, json=None)
+
+
+@mcp.tool()
+def log_entry(profile: str, type: str, entries: list[dict] | None = None,
+              fields: dict | None = None, time: str = "now", notes: str | None = None,
+              id: str | None = None, dry_run: bool = False) -> Any:
+    """Write self-reported data entries: type is one of med_usage, symptoms, mood, energy,
+    journal, bowel_movement, menstrual_cycle, sexual_activity. Either pass `entries` (list of
+    entry objects, batch) or `fields` for a single entry (e.g. {"symptom_name":"Cough",
+    "severity":4}). See `schema`."""
+    if entries:
+        return run(cli.cmd_log, profile=profile, type=type, json=json.dumps(entries),
+                   field=None, time=time, notes=None, id=None, dry_run=dry_run)
+    field = [f"{k}={json.dumps(v) if not isinstance(v, str) else v}" if k != "tags"
+             else f"tags={','.join(v) if isinstance(v, list) else v}" for k, v in (fields or {}).items()]
+    return run(cli.cmd_log, profile=profile, type=type, json=None, field=field, time=time,
+               notes=notes, id=id, dry_run=dry_run)
+
+
+@mcp.tool()
+def log_metric(profile: str, type: str, value: float, unit: str | None = None,
+               method: str | None = None, time: str = "now", source: str = "guavahealth.com",
+               id: str | None = None, dry_run: bool = False) -> Any:
+    """Write one numeric reading (weight, height, body_temperature, systolic_blood_pressure,
+    diastolic_blood_pressure, blood_glucose, heart_rate, ...). Units are UCUM (kg, Cel, mm[Hg],
+    mmol/L). Blood pressure is two calls with the same time."""
+    return run(cli.cmd_metric, profile=profile, type=type, value=value, unit=unit,
+               method=method, time=time, source=source, id=id, dry_run=dry_run)
+
+
+# ---------------------------------------------------------------- reads
+
+@mcp.tool()
+def search(profile: str, resource: str, types: str | None = None, start: str | None = None,
+           end: str | None = None, count: int = 200, all_pages: bool = False,
+           max_pages: int = 20) -> Any:
+    """Read metrics | sleep | activities | nutrition | water. For metrics, `types` is required
+    (comma-separated; high-volume types like heart_rate or steps must be alone). Read each
+    entry's `unit`; it may differ from what was written."""
+    return run(cli.cmd_search, profile=profile, resource=resource, types=types, start=start,
+               end=end, count=count, all=all_pages, max_pages=max_pages)
+
+
+@mcp.tool()
+def fhir_read(profile: str, resource: str, id: str | None = None) -> Any:
+    """Read clinical records (FHIR R4): Patient, Practitioner, AllergyIntolerance, Condition,
+    Procedure, MedicationRequest, Immunization."""
+    return run(cli.cmd_fhir, profile=profile, resource=resource, id=id)
+
+
+@mcp.tool()
+def schema(section: str | None = None) -> Any:
+    """Entry types, fields, units and API limits: data_entries | metrics | search | fhir."""
+    return run(cli.cmd_schema, section=section)
+
+
+@mcp.tool()
+def version() -> Any:
+    """guava-cli version, environment and token directory of this server."""
+    return run(cli.cmd_version)
+
+
+def main() -> None:
+    transport = os.environ.get("MCP_TRANSPORT", "streamable-http")
+    mcp.run(transport="stdio" if transport == "stdio" else "streamable-http")
+
+
+if __name__ == "__main__":
+    main()

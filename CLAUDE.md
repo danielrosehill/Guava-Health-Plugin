@@ -25,10 +25,11 @@ anything as if Guava made, endorses or supports it.
   `uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'` installs two commands:
   - `guava` (`cli.py`): auth with PAR+PKCE, rotating refresh, per-profile tokens, reads, writes, `schema`, `scopes`, `version`. JSON out.
   - `guava-nfc` (`nfc.py`): DIY Guava Tag writer. The `[nfc]` extra adds pyscard.
+  - `guava-mcp` (`mcp_server.py`, extra `[mcp]`, pinned `mcp<2`): thin FastMCP wrapper calling the cli functions. Image: `Dockerfile`.
   - `scopes-full.txt`: the family-manager preset, shipped inside the package.
   Skills call `guava` / `guava-nfc` and install them if missing. Bump `__init__.py`, pyproject and plugin.json versions together.
-- `skills/*/SKILL.md`: create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, write-nfc-tag.
-- `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags.
+- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, write-nfc-tag.
+- `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags, mcp-server.
 - `reference/`: app-form.json.
 
 ## State (2026-11-03)

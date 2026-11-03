@@ -7,6 +7,8 @@ compatibility: A connected profile (connect-profile skill). Uses the guava CLI f
 
 # Log a medication dose
 
+If the guava MCP tools are connected (through a gateway they appear as e.g. `mcp__gateway__guava__log_medication`; locally as `mcp__guava__…`), call those instead of the CLI: same arguments, same JSON.
+
 Command: `guava` (package `guava-cli` from this repo). If `command -v guava` fails, install it:
 `uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'`
 (add the `[nfc]` extra for tag writing). Prefix calls with the secrets wrapper if credentials live there.

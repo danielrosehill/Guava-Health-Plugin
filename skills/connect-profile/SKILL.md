@@ -10,11 +10,16 @@ compatibility: Python 3.9+, openssl (or use --paste), GUAVA_CLIENT_ID and GUAVA_
 One grant equals one Guava profile. There is no family scope: a dependent is a separate
 grant, chosen on Guava's consent screen. See `docs/family-and-dependents.md`.
 
+If the guava MCP tools are connected (through a gateway they appear as e.g. `mcp__gateway__guava__log_medication`; locally as `mcp__guava__…`), call those instead of the CLI: same arguments, same JSON.
+
 Command: `guava` (package `guava-cli` from this repo). If `command -v guava` fails, install it:
 `uv tool install 'git+https://github.com/danielrosehill/Guava-Health-Plugin'`
 (add the `[nfc]` extra for tag writing). Prefix calls with the secrets wrapper if credentials live there.
 
 ## Steps
+
+0. Grants live in exactly one place (Guava rotates refresh tokens). If the guava MCP server
+   runs on a gateway, connect there with `auth_start` / `auth_finish`, not locally.
 
 1. `guava profiles` lists existing grants (label, Guava profile name, refresh-token present).
    If the requested person is already connected and `me` works, stop.

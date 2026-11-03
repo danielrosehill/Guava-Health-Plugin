@@ -1,6 +1,6 @@
 [project]
 name = "guava-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "Unofficial Guava Health API client for agents (OAuth 2.1, per-profile grants for family plans) plus a DIY Guava Tag NFC writer. Not made by Guava Health, Inc."
 readme = "README.md"
 license = "MIT"
@@ -9,10 +9,13 @@ dependencies = []
 
 [project.optional-dependencies]
 nfc = ["pyscard>=2.0"]
+# MCP SDK 2.x renamed FastMCP internals; pin to 1.x until tested.
+mcp = ["mcp>=1.10,<2"]
 
 [project.scripts]
 guava = "guava_cli.cli:main"
 guava-nfc = "guava_cli.nfc:main"
+guava-mcp = "guava_cli.mcp_server:main"
 
 [project.urls]
 Repository = "https://github.com/danielrosehill/Guava-Health-Plugin"

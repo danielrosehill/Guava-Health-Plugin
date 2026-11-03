@@ -39,6 +39,9 @@ child, and what the API can't do yet: [docs/family-and-dependents.md](docs/famil
 
 ## Setup
 
+The `setup` skill walks through everything below, plus the optional MCP server.
+
+
 1. Join the API platform at https://guavahealth.com/api, then create an app at
    https://guavahealth.com/api-portal/apps. Field-by-field guide:
    [docs/creating-the-api-app.md](docs/creating-the-api-app.md). Machine-readable form
@@ -78,12 +81,20 @@ child, and what the API can't do yet: [docs/family-and-dependents.md](docs/famil
 
 | Skill | For |
 |---|---|
+| `setup` | Whole setup: CLI, API app, credentials, profiles, then optionally an MCP server (local or behind a gateway) |
 | `create-api-app` | Fill in the API app form in your signed-in browser (stops before Create) |
 | `connect-profile` | Authorise yourself or a dependent; list connected profiles |
 | `log-medication` | Record a dose (`med_usage`) |
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
 | `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |
+
+## MCP server (optional)
+
+`guava-mcp` serves the same functions as MCP tools. Run it where the tokens live, e.g. a home
+server behind your own MCP gateway, so every client shares one set of grants. Guava rotates
+refresh tokens, so a grant can't live on two machines. See [docs/mcp-server.md](docs/mcp-server.md);
+the `setup` skill does the deployment.
 
 ## Limits of the Guava API (2026-11-03)
 
