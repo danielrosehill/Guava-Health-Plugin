@@ -30,7 +30,10 @@ secrets manager straight away and export them as `GUAVA_CLIENT_ID` / `GUAVA_CLIE
 
 Create App gives a **Development** app with a **test** key (`guava_test_client_…`). It only
 works against the sandbox, which serves a synthetic patient. To reach real profiles, open
-the app in API Apps and click **Submit for production approval**. Once it's approved,
+the app in API Apps and click **Submit for production approval** (then OK in the confirm
+prompt). For a personal app it was approved **instantly** (2026-11-03): status changed to
+"Approved for production". Write Purpose before you submit; see the README for the
+framing (personal, non-commercial, single-user). Once it's approved,
 **Create live key**, then store the live id and secret (`GUAVA_ENV` is inferred from the
 id prefix). Redirect URIs and scopes stay editable on the same page (**Save changes**).
 

@@ -3,7 +3,13 @@
 Unofficial agent plugin (Claude Code skills plus a stdlib Python CLI) for the
 [Guava Health](https://guavahealth.com) API. Not affiliated with Guava Health, Inc.
 
-It lets an agent:
+**What this is:** a personal, non-commercial, single-user integration. It is not a product,
+a service or a multi-tenant app. Each person who uses it creates their own Guava API app
+and runs it for their own household. Their keys and tokens stay on their own machines.
+The intended setup is a local AI agent (Claude Code here) calling the Guava API for you,
+directly or through a self-hosted MCP/AI gateway on a home server.
+
+What it lets your agent do:
 
 - log medication doses, symptoms, mood, energy, journal notes and bowel movements;
 - log readings such as temperature, weight, height, blood pressure, glucose, water and food;
@@ -11,8 +17,12 @@ It lets an agent:
   (medications, allergies, conditions, immunizations, procedures);
 - do all of this **for dependents on a family plan** (e.g. a parent logging a child's
   doses), with one grant per profile;
-- **fill in Guava's "New API App" form for you**, with the scope boxes for a chosen preset;
-- **write your own Guava Tags** onto blank NFC stickers (tap to log a medication, a group or water), see [docs/nfc-tags.md](docs/nfc-tags.md).
+- **fill in Guava's "New API App" form for you**, with the scope boxes for a chosen preset.
+
+**Side feature: DIY Guava Tags.** The `write-nfc-tag` skill writes Guava's tag URL onto blank
+NFC stickers, so a tap with your phone logs a medication, a group or water in the Guava
+app. It doesn't use the API. It's included because it pairs well with the logging. Details:
+[docs/nfc-tags.md](docs/nfc-tags.md).
 
 ## Family plans in one paragraph
 
@@ -60,7 +70,7 @@ child, and what the API can't do yet: [docs/family-and-dependents.md](docs/famil
 | `log-medication` | Record a dose (`med_usage`) |
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
-| `write-nfc-tag` | Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |
+| `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers and set them up for you or a dependent |
 
 ## Limits of the Guava API (2026-11-03)
 
