@@ -53,6 +53,17 @@ Condensed from https://guavahealth.com/api-portal/documentation (signed-in page,
   by exact name, so pass the name exactly as `guava meds` returns it. Whether a trimmed name
   creates a duplicate is untested.
 
+- **No dose history, last-taken or reminder read (re-probed 2026-11-07, live).** 404 on
+  `POST /v1/data-entries/_search` (with and without `type=med_usage`), `POST /v1/med_usage/_search`,
+  `POST /v1/med-usage/_search`, `POST /v1/medications/_search`, `GET /v1/reminders`,
+  `GET /v1/medication-reminders`, `GET /v1/schedules`, `POST /v1/reminders/_search`, and FHIR
+  `MedicationAdministration`, `MedicationStatement`, `MedicationDispense`, `Task` and `CarePlan`.
+- **`MedicationRequest` carries no usable schedule (live, one account, 18 entries).** Dosing fields
+  present: `dosageInstruction[].text` (12 entries) and `timing.repeat.boundsPeriod.start` (6). No
+  frequency, time of day or next-due field.
+- **`GET /fhir/R4/Observation` returns 200 on live**, although it isn't in the documented list. Its
+  contents were not inspected.
+
 ## OAuth 2.1
 
 Confidential clients only. PKCE S256, Pushed Authorization Requests (PAR) and
