@@ -37,6 +37,10 @@ framing (personal, non-commercial, single-user). Once it's approved,
 **Create live key**, then store the live id and secret (`GUAVA_ENV` is inferred from the
 id prefix). Redirect URIs and scopes stay editable on the same page (**Save changes**).
 
+**The test key must complete a real login first (observed 2026-11-07).** Guava refuses the
+submission until the test key has done `/oauth/par`, an `authorization_code` exchange at
+`/oauth/token`, and a `/v1` request. `guava auth` followed by `guava me` covers all three.
+
 ## Which boxes
 
 For a holder who also manages dependents, the plugin's default (`family-manager` preset,

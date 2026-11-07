@@ -103,6 +103,11 @@ server behind your own MCP gateway, so every client shares one set of grants. Gu
 refresh tokens, so a grant can't live on two machines. See [docs/mcp-server.md](docs/mcp-server.md);
 the `setup` skill does the deployment.
 
+## Home Assistant
+
+[Guava-HA-Integration](https://github.com/danielrosehill/Guava-HA-Integration) is an unofficial
+custom integration for logging doses from buttons, Zigbee remotes, tags and voice.
+
 ## Limits of the Guava API (2026-11-03)
 
 No reading back self-logged entries (doses, symptoms, mood, journal), no editing or
