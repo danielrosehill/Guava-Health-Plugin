@@ -44,6 +44,15 @@ Condensed from https://guavahealth.com/api-portal/documentation (signed-in page,
   that is approved, "Create live key" is disabled ("Submit your app for production approval
   to enable live keys"). You can create more test keys and edit the scopes there later.
 
+## Tested 2026-11-07 (live)
+
+- **A new medication name works on live.** A `med_usage` entry with an unused name returned
+  `{"accepted":1,"environment":"live"}`, and the medication appeared straight away in
+  `GET /fhir/R4/MedicationRequest`: status `active`, no dose text, shown as app-entered.
+- **App-entered names can carry trailing spaces** (seen on live, e.g. `"Lexapro "`). Matching is
+  by exact name, so pass the name exactly as `guava meds` returns it. Whether a trimmed name
+  creates a duplicate is untested.
+
 ## OAuth 2.1
 
 Confidential clients only. PKCE S256, Pushed Authorization Requests (PAR) and
