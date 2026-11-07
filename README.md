@@ -93,6 +93,8 @@ The `setup` skill walks through everything below, plus the optional MCP server.
 | `log-health-entry` | Symptoms, mood, energy, journal, temperature, weight, BP, glucose, water, food |
 | `review-health-data` | Pull and summarise metrics, sleep, activity, clinical records |
 | `export-medications` | Medication list (CSV/Markdown/JSON) and the dose log of doses written through the plugin |
+| `add-medication-note` | *(browser, last resort)* Add a note to a medication in the web app, which the API can't do |
+| `create-medication-group` | *(browser, last resort)* Create a medication group in the web app, which the API can't do |
 | `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers with a USB reader and set them up for you or a dependent |
 | `email-nfc-tag-sheet` | *(side feature)* No reader: email yourself one tag URL per medication with the phone-writing steps |
 

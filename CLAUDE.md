@@ -28,11 +28,14 @@ anything as if Guava made, endorses or supports it.
   - `guava-mcp` (`mcp_server.py`, extra `[mcp]`, pinned `mcp<2`): thin FastMCP wrapper calling the cli functions. Image: `Dockerfile`.
   - `scopes-full.txt`: the family-manager preset, shipped inside the package.
   Skills call `guava` / `guava-nfc` and install them if missing. Bump `__init__.py`, pyproject and plugin.json versions together.
-- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, export-medications, write-nfc-tag, email-nfc-tag-sheet.
-- `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags, mcp-server.
+- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, export-medications, write-nfc-tag, email-nfc-tag-sheet, and two browser skills, add-medication-note and create-medication-group.
+- `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags, mcp-server, web-app (browser map, last resort only).
 - `reference/`: app-form.json.
 
-## State (2026-11-03)
+## State (2026-11-07)
+
+- 0.6.0: browser skills for what the API can't do. Add one only when no API route exists. Target elements
+  by reference, and keep each step's V/U status in `docs/web-app.md` current.
 
 - 0.5.0: `guava meds` (flattened MedicationRequest, csv/md/json export), local dose journal
   `$GUAVA_HOME/dose-log.jsonl` + `guava dose-log` (the API can't read doses), `guava water`
