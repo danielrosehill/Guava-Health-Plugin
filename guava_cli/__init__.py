@@ -1,2 +1,2 @@
 """Unofficial Guava Health API client and DIY Guava Tag writer. Not made by Guava Health, Inc."""
-__version__ = "0.6.0"
+__version__ = "0.7.0"

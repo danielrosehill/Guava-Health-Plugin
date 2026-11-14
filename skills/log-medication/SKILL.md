@@ -45,7 +45,7 @@ Probed against live and sandbox on 2026-11-03. Every medication-management path 
 |---|---|
 | "Check X's medications" | `guava fhir MedicationRequest -p X`. Returns the profile's medication list, **including medications added by hand in the app** (tested live 2026-11-03: `requester` and `reportedReference` are the patient, `intent: plan`, dose in `dosageInstruction[].text`, extra text in `note`), plus any from connected clinical records. Logged doses (history) **cannot be read**. Say so if asked. |
 | "Add a medication" | Only by logging a dose under the new exact name (step 6); that creates it. There is no way to set dose, unit or schedule. Confirm first, because it writes a dose entry too. Otherwise send the user to the app. |
-| "Edit / rename / change schedule" | Not possible through the API. Guava app. |
+| "Edit / rename / change schedule" | Not possible through the API. Web app: skills `manage-medications`, `medication-reminders`. |
 | "Add a note to a medication" | A medication's own notes are read-only through the API (they come back in `guava meds` `notes`, from `MedicationRequest.note`); setting them is the Guava app. What the API can do: a note on a **dose** (`--notes` on `log-med`, up to 10000 chars), or a `journal` entry naming the medication (`guava log --type journal --notes …`). Offer those; say which one was written. |
 | "Export the list / the doses" | Skill `export-medications`. |
 | "Delete a medication or a dose" | Not possible through the API. Guava app (entries written by the API are editable and deletable there). |

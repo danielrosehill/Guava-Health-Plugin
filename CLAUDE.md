@@ -28,11 +28,16 @@ anything as if Guava made, endorses or supports it.
   - `guava-mcp` (`mcp_server.py`, extra `[mcp]`, pinned `mcp<2`): thin FastMCP wrapper calling the cli functions. Image: `Dockerfile`.
   - `scopes-full.txt`: the family-manager preset, shipped inside the package.
   Skills call `guava` / `guava-nfc` and install them if missing. Bump `__init__.py`, pyproject and plugin.json versions together.
-- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, export-medications, write-nfc-tag, email-nfc-tag-sheet, and two browser skills, add-medication-note and create-medication-group.
+- `skills/*/SKILL.md`: setup (entry point), create-api-app, connect-profile, log-medication, log-health-entry, review-health-data, export-medications, write-nfc-tag, email-nfc-tag-sheet, and browser skills: add-medication-note, create-medication-group, medication-reminders, manage-medications, manage-conditions, connect-data-source, upload-health-files, import-csv, manage-guava-tags.
 - `docs/`: api-notes (endpoint reference), family-and-dependents, creating-the-api-app, nfc-tags, mcp-server, web-app (browser map, last resort only).
 - `reference/`: app-form.json.
 
-## State (2026-11-07)
+## State (2026-11-14)
+
+- 0.7.0: seven more browser skills from a read-only mapping session (2026-11-14): reminders,
+  medications, conditions, sources, file upload, CSV import, Guava Tags. Profile switching mapped
+  (`/p/<profile-id>`). Every save step is still U in `docs/web-app.md`: flip it to V with the date
+  the first time an agent saves for real.
 
 - 0.6.0: browser skills for what the API can't do. Add one only when no API route exists. Target elements
   by reference, and keep each step's V/U status in `docs/web-app.md` current.

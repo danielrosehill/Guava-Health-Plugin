@@ -95,6 +95,13 @@ The `setup` skill walks through everything below, plus the optional MCP server.
 | `export-medications` | Medication list (CSV/Markdown/JSON) and the dose log of doses written through the plugin |
 | `add-medication-note` | *(browser, last resort)* Add a note to a medication in the web app, which the API can't do |
 | `create-medication-group` | *(browser, last resort)* Create a medication group in the web app, which the API can't do |
+| `medication-reminders` | *(browser)* Create, change or delete medication reminders (multi-med, schedules); the API has no reminders |
+| `manage-medications` | *(browser)* Add, edit, stop a medication, set pills left |
+| `manage-conditions` | *(browser)* Add conditions, injuries, allergies |
+| `connect-data-source` | *(browser)* Open a device/app connection tile; the user signs in |
+| `upload-health-files` | *(browser)* Upload lab PDFs, visit notes, images, DICOM, CCDA |
+| `import-csv` | *(browser)* Bulk CSV import (Med Usage and 19 other types; Medisafe/Bearable/Visible) |
+| `manage-guava-tags` | *(browser)* See, edit or remove Guava Tags |
 | `write-nfc-tag` | *(side feature)* Make DIY Guava Tags on blank NFC stickers with a USB reader and set them up for you or a dependent |
 | `email-nfc-tag-sheet` | *(side feature)* No reader: email yourself one tag URL per medication with the phone-writing steps |
 
