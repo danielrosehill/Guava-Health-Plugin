@@ -62,7 +62,7 @@ Status: **V 2026-11-07** means an agent ran the step on a live account. **U** me
 | Add Condition form | fields in skill `manage-conditions` | V 2026-11-14 (read) |
 | Add Injury, Add Allergy forms | | U |
 | Upload page, hidden file-input | `/sources/upload-files` | V 2026-11-14 |
-| New Document form after an upload, **Save** | Document Date, Document Short Name (both pre-filled by Guava from the file), Notes, Cancel / Save; then the file shows under Recent Documents as *Extracting* | V 2026-11-14 (a PDF saved to a dependent's profile) |
+| New Document form after an upload, **Save** | Document Date, Document Short Name (both pre-filled by Guava from the file), Notes, Cancel / Save; then the file shows under Recent Documents as *Extracting* | V 2026-11-14 (21 PDFs saved to a dependent's profile; DICOM via the browser tool rejected as octet-stream; several files at once open a Bulk Upload view) |
 | Import page, Med Usage columns | `/sources/import` | V 2026-11-14 (read) |
 | Guava Tags list, tag details, Edit Tag | `/nfc-settings` | V 2026-11-14 (read) |
 | Saving a note with **Update** | | U |

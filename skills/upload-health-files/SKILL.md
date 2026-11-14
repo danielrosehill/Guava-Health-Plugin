@@ -22,9 +22,15 @@ the profile and get a yes before uploading, unless the user named both.
   Digitising (Reading, Classifying, Extracting) carries on after **Save**.
 - Saved files are listed under **Recent Documents** on the upload page (status *Extracting* at
   first) and counted under **File Uploads** on `/sources`.
-- Several files in one upload appear in one form's Files table, so they become **one** document
-  (inferred). Upload one document at a time; only files that belong together (the images of one
-  DICOM study) go in together.
+- Several files in one upload open a **Bulk Upload** view, not one combined document (tested
+  2026-11-14). One file per upload is the tested path.
+- **DICOM through the browser tool fails**: Claude in Chrome's file upload sends `.dcm` as
+  `application/octet-stream`, and Guava answers "File type not supported" (tested 2026-11-14 with
+  4 ultrasound images). Upload the report PDF instead, or have the user drag the DICOM files in
+  themselves.
+- **Cancel** on an unsaved New Document asks to confirm abandoning it (OK). Nothing is written.
+- Read Guava's pre-filled date: a date before the person was born means the document is probably
+  someone else's (e.g. a parent's birth paperwork). Cancel and ask.
 
 ## Steps
 
