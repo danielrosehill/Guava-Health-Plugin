@@ -22,9 +22,11 @@ Status: **V 2026-11-07** means an agent ran the step on a live account. **U** me
 - Profile menu: the name button at top right → the chevron **show all profiles or add a profile** →
   one link per profile, plus **Add profile**. The account holder's link is `/today`; a dependent's
   is `/today/p/<profile-id>`.
-- The `/p/<profile-id>` suffix works on other pages too: `/profile/p/<profile-id>` opened the
-  dependent's Profile page directly (tested). Pages without it (`/sources/...`, `/nfc-settings`) act
-  on whichever profile was last selected, so switch first and check the name at top right.
+- A typed `/p/<profile-id>` URL shows that profile **on that page only**: it does not switch the
+  active profile. Tested 2026-11-14: after opening `/today/p/<id>` by URL, `/sources/upload-files`
+  still showed the account holder. **Always switch through the menu**, then move with the app's own
+  links (nav bar **Sources**, then **File Uploads**). The app then keeps the suffix itself
+  (`/sources/p/<id>`, `/sources/upload-files/p/<id>`). Check the name at top right before every write.
 - The profile id is not the API's patient id. Keep it in your own private notes, never in this repo.
 - Same menu: **Data sources**, **Reminders**, **Emergency Card**, **Guava Tags**, **Family plan**,
   **Settings**.
@@ -59,11 +61,12 @@ Status: **V 2026-11-07** means an agent ran the step on a live account. **U** me
 | New Medication form | **New Med**; fields in skill `manage-medications` | V 2026-11-14 (read) |
 | Add Condition form | fields in skill `manage-conditions` | V 2026-11-14 (read) |
 | Add Injury, Add Allergy forms | | U |
-| Upload page, hidden file-input | `/sources/upload-files` | V 2026-11-14 (read) |
+| Upload page, hidden file-input | `/sources/upload-files` | V 2026-11-14 |
+| New Document form after an upload, **Save** | Document Date, Document Short Name (both pre-filled by Guava from the file), Notes, Cancel / Save; then the file shows under Recent Documents as *Extracting* | V 2026-11-14 (a PDF saved to a dependent's profile) |
 | Import page, Med Usage columns | `/sources/import` | V 2026-11-14 (read) |
 | Guava Tags list, tag details, Edit Tag | `/nfc-settings` | V 2026-11-14 (read) |
 | Saving a note with **Update** | | U |
-| Saving a reminder, a new medication, a condition, a tag; Skip/Log; uploads; imports | | U |
+| Saving a reminder, a new medication, a condition, a tag; Skip/Log; imports | | U |
 | Confirming the picker, and saving a group | No save control was visible before a medication was chosen | U |
 
 ## Read-only views the API lacks
